@@ -8,11 +8,9 @@ import {
   Scripts,
   ScrollRestoration,
 } from "@remix-run/react";
-import styles from "./shared.css";
+import styles from "./tailwind.css";
 
-export const links: LinksFunction = () => {
-  return [{ rel: "stylesheet", href: styles }];
-};
+export const links: LinksFunction = () => [{ rel: "stylesheet", href: styles }];
 
 export const meta: MetaFunction = () => {
   return [
@@ -30,11 +28,20 @@ export default function App() {
         <Meta />
         <Links />
       </head>
-      <body>
-        <nav>
-          <Link to="discover">Discover</Link>
-          <Link to="app">App</Link>
-          <Link to="settings">Settings</Link>
+      <body className="flex h-screen">
+        <nav className="bg-primary text-white">
+          <ul className="flex flex-col">
+            <li>
+              <Link to="discover">Discover</Link>
+            </li>
+            <li>
+              <Link to="app">App</Link>
+            </li>
+            <li>
+              {" "}
+              <Link to="settings">Settings</Link>
+            </li>
+          </ul>
         </nav>
         <Outlet />
         <ScrollRestoration />
