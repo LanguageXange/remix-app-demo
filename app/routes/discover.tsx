@@ -1,7 +1,13 @@
+import type { LinksFunction } from "@remix-run/node";
+import { Header, links as headerLinks } from "~/components/Header";
+export const links: LinksFunction = () => {
+  return [...headerLinks()];
+};
+
 export default function Discover() {
   return (
     <div>
-      <h1>Discover</h1>
+      <Header title="Discover" />
     </div>
   );
 }
