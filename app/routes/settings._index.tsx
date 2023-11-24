@@ -7,6 +7,7 @@ export const loader: LoaderFunction = () => {
 };
 export default function Settings() {
   const data = useLoaderData<typeof loader>();
+
   return (
     <div>
       <h1> Setting Index Page</h1>

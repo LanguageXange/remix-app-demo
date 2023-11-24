@@ -4,6 +4,7 @@ import { useLoaderData } from "@remix-run/react";
 import type { LoaderFunction } from "@remix-run/node";
 
 export const loader: LoaderFunction = () => {
+  throw new Error("profile error!");
   return json({ message: "hi this is profile message" });
 };
 
