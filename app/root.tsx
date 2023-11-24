@@ -11,7 +11,7 @@ import {
   useResolvedPath,
   useMatches,
 } from "@remix-run/react";
-import classNames from "classnames";
+import { classNames } from "~/utils/misc";
 import styles from "./tailwind.css";
 import {
   HomeIcon,
@@ -50,7 +50,7 @@ export default function App() {
               <DiscoverIcon />
             </AppNavLink>
 
-            <AppNavLink to="app">
+            <AppNavLink to="app/pantry">
               <BookIcon />
             </AppNavLink>
 
@@ -59,7 +59,7 @@ export default function App() {
             </AppNavLink>
           </ul>
         </nav>
-        <div className="p-4">
+        <div className="p-4 w-full">
           <Outlet />
         </div>
 
