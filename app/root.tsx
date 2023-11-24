@@ -1,13 +1,15 @@
 import type { MetaFunction, LinksFunction } from "@remix-run/node";
 import {
   Links,
-  Link,
   NavLink,
   LiveReload,
   Meta,
   Outlet,
   Scripts,
   ScrollRestoration,
+  useNavigation,
+  useResolvedPath,
+  useMatches,
 } from "@remix-run/react";
 import classNames from "classnames";
 import styles from "./tailwind.css";
@@ -17,6 +19,7 @@ import {
   BookIcon,
   SettingIcon,
 } from "./components/Icon";
+import { useEffect } from "react";
 
 export const links: LinksFunction = () => [{ rel: "stylesheet", href: styles }];
 
@@ -74,6 +77,12 @@ type AppNavLinksProps = {
 };
 
 function AppNavLink({ to, children }: AppNavLinksProps) {
+  const navigation = useNavigation();
+  const path = useResolvedPath(to);
+
+  const isLoading =
+    navigation.state === "loading" &&
+    navigation.location.pathname === path.pathname;
   return (
     <li className="w-16">
       <NavLink to={to}>
@@ -81,9 +90,8 @@ function AppNavLink({ to, children }: AppNavLinksProps) {
           <div
             className={classNames(
               "py-4 flex justify-center hover:bg-primary-light",
-              {
-                "bg-primary-light": isActive,
-              }
+              isActive ? "bg-primary-light" : "",
+              isLoading ? "animate-pulse bg-primary-light" : ""
             )}
           >
             {children}
