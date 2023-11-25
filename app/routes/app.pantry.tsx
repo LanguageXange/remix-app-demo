@@ -1,12 +1,20 @@
-import { useLoaderData, useSearchParams } from "@remix-run/react";
+import {
+  Form,
+  useLoaderData,
+  useNavigation,
+  useSearchParams,
+} from "@remix-run/react";
 import {
   type LoaderFunction,
   type LoaderFunctionArgs,
   json,
+  type ActionFunction,
 } from "@remix-run/node";
-import { getAllShelves } from "~/models/pantry-shelf.server";
+import { createShelf, getAllShelves } from "~/models/pantry-shelf.server";
 import { classNames } from "~/utils/misc";
-import { SearchIcon } from "~/components/Icon";
+import { SearchIcon, PlusIcon } from "~/components/Icon";
+import { Button } from "~/components/Button";
+import { useEffect, useRef } from "react";
 
 type LoaderData = {
   shelves: Awaited<ReturnType<typeof getAllShelves>>;
@@ -21,17 +29,34 @@ export const loader: LoaderFunction = async ({
   return json({ shelves });
 };
 
+export const action: ActionFunction = async () => {
+  return createShelf();
+};
+
 // remix handles the API layer for us and injects the data into the component tree
 export default function Pantry() {
   const [searchParam] = useSearchParams();
   const data = useLoaderData<typeof loader>() as LoaderData;
+  const navigation = useNavigation();
+  const isSearching = navigation.formData?.has("q");
+  const isCreatingShelf = navigation.formData?.has("createShelf");
+
+  const containerRef = useRef<HTMLUListElement>(null);
+
+  useEffect(() => {
+    if (!isCreatingShelf && containerRef.current) {
+      containerRef.current.scrollLeft = 0;
+    }
+  }, [isCreatingShelf]);
 
   return (
     <div>
-      <form
+      <Form
         className={classNames(
           "flex border-2 border-gray-400 rounded-md",
-          "focus-within:border-primary md:w-80"
+          "focus-within:border-primary md:w-80",
+          isSearching ? "animate-pulse" : "",
+          isCreatingShelf ? "bg-primary-light" : ""
         )}
       >
         <button className="px-2 mr-1">
@@ -45,11 +70,26 @@ export default function Pantry() {
           placeholder="Searching shelves ..."
           className="p-2 w-full outline-none"
         />
-      </form>
+      </Form>
+
+      <Form method="post">
+        <Button
+          type="submit"
+          otherClass="mt-4 w-full md:w-fit"
+          name="createShelf"
+        >
+          <PlusIcon />
+          <span className="pl-2">
+            {" "}
+            {isCreatingShelf ? "Creating ..." : "Create Shelf"}
+          </span>
+        </Button>
+      </Form>
 
       <ul
+        ref={containerRef}
         className={classNames(
-          "flex gap-8 overflow-x-auto mt-4",
+          "flex gap-8 overflow-x-auto mt-4 pb-4",
           "snap-x snap-mandatory md:snap-none"
         )}
       >
@@ -62,7 +102,7 @@ export default function Pantry() {
               "md:w-96"
             )}
           >
-            <h1 className="text-2xl font-bold mb-2">{shelf.name}</h1>
+            <h1 className="text-xl font-bold mb-2">{shelf.name}</h1>
             <ul>
               {shelf.items.map((item) => (
                 <li key={item.id} className="py-2">
