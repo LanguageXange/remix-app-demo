@@ -1,5 +1,6 @@
 import {
   Form,
+  useFetcher,
   useLoaderData,
   useNavigation,
   useSearchParams,
@@ -56,8 +57,10 @@ export default function Pantry() {
   const [searchParam] = useSearchParams();
   const data = useLoaderData<typeof loader>() as LoaderData;
   const navigation = useNavigation();
+  const createShelfFetcher = useFetcher();
   const isSearching = navigation.formData?.has("q");
-  const isCreatingShelf = navigation.formData?.get("_action") === "createShelf";
+  const isCreatingShelf =
+    createShelfFetcher.formData?.get("_action") === "createShelf";
   const containerRef = useRef<HTMLUListElement>(null);
 
   useEffect(() => {
@@ -89,7 +92,7 @@ export default function Pantry() {
         />
       </Form>
 
-      <Form method="post">
+      <createShelfFetcher.Form method="post">
         <Button
           type="submit"
           otherClass="bg-primary hover:bg-primary-light mt-4 w-full md:w-fit"
@@ -102,7 +105,7 @@ export default function Pantry() {
             {isCreatingShelf ? "Creating ..." : "Create Shelf"}
           </span>
         </Button>
-      </Form>
+      </createShelfFetcher.Form>
 
       <ul
         ref={containerRef}
@@ -111,43 +114,61 @@ export default function Pantry() {
           "snap-x snap-mandatory md:snap-none"
         )}
       >
-        {data.shelves.map((shelf) => {
-          const isDeleting =
-            navigation.formData?.get("_action") === "deleteShelf" &&
-            navigation.formData?.get("shelfId") === shelf.id;
-          return (
-            <li
-              key={shelf.id}
-              className={classNames(
-                "border-2 border-primary rounded-md p-4 h-fit",
-                "w-[calc(100vw-2rem)] flex-none snap-center",
-                "md:w-96"
-              )}
-            >
-              <h1 className="text-xl font-bold mb-2">{shelf.name}</h1>
-              <ul>
-                {shelf.items.map((item) => (
-                  <li key={item.id} className="py-2">
-                    {item.name}
-                  </li>
-                ))}
-
-                <Form method="post">
-                  <input type="hidden" name="shelfId" value={shelf.id} />
-                  <Button
-                    otherClass="w-full bg-red-500 hover:bg-red-400"
-                    name="_action"
-                    value="deleteShelf"
-                    disabled={isDeleting}
-                  >
-                    {isDeleting ? "Deleting ..." : "Delete Shelf"}
-                  </Button>
-                </Form>
-              </ul>
-            </li>
-          );
-        })}
+        {data.shelves.map((shelf) => (
+          <Shelf key={shelf.id} shelf={shelf} />
+        ))}
       </ul>
     </div>
+  );
+}
+
+type ShelfItem = {
+  id: string;
+  name: string;
+};
+type ShelfProps = {
+  shelf: {
+    id: string;
+    name: string;
+    items: ShelfItem[];
+  };
+};
+
+function Shelf({ shelf }: ShelfProps) {
+  // useFetcher()
+  const deleteShelfFetcher = useFetcher();
+  const isDeleting =
+    deleteShelfFetcher.formData?.get("_action") === "deleteShelf" &&
+    deleteShelfFetcher.formData?.get("shelfId") === shelf.id;
+  return (
+    <li
+      key={shelf.id}
+      className={classNames(
+        "border-2 border-primary rounded-md p-4 h-fit",
+        "w-[calc(100vw-2rem)] flex-none snap-center",
+        "md:w-96"
+      )}
+    >
+      <h1 className="text-xl font-bold mb-2">{shelf.name}</h1>
+      <ul>
+        {shelf.items.map((item) => (
+          <li key={item.id} className="py-2">
+            {item.name}
+          </li>
+        ))}
+
+        <deleteShelfFetcher.Form method="post">
+          <input type="hidden" name="shelfId" value={shelf.id} />
+          <Button
+            otherClass="w-full bg-red-500 hover:bg-red-400"
+            name="_action"
+            value="deleteShelf"
+            disabled={isDeleting}
+          >
+            {isDeleting ? "Deleting ..." : "Delete Shelf"}
+          </Button>
+        </deleteShelfFetcher.Form>
+      </ul>
+    </li>
   );
 }
