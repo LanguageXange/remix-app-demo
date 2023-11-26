@@ -15,15 +15,18 @@ import {
   createShelf,
   deleteShelf,
   getAllShelves,
+  saveShelfName,
 } from "~/models/pantry-shelf.server";
 import { classNames } from "~/utils/misc";
-import { SearchIcon, PlusIcon } from "~/components/Icon";
+import { SearchIcon, PlusIcon, SaveIcon } from "~/components/Icon";
 import { Button } from "~/components/Button";
 import { useEffect, useRef } from "react";
 
 type LoaderData = {
   shelves: Awaited<ReturnType<typeof getAllShelves>>;
 };
+
+type FieldError = { [key: string]: string };
 
 export const loader: LoaderFunction = async ({
   request,
@@ -47,6 +50,32 @@ export const action: ActionFunction = async ({ request }) => {
       return deleteShelf(shelfId);
     case "createShelf":
       return createShelf();
+    case "saveShelfName": {
+      const shelfId = formData.get("shelfId");
+      const shelfName = formData.get("shelfName");
+      const errors: FieldError = {};
+      if (
+        typeof shelfId === "string" &&
+        typeof shelfName === "string" &&
+        shelfName !== ""
+      ) {
+        return saveShelfName(shelfId, shelfName);
+      }
+
+      if (typeof shelfId !== "string") {
+        errors["shelfId"] = "Shelf ID must be a string";
+      }
+      if (typeof shelfName !== "string") {
+        errors["shelfName"] = "Shelf Name must be a string";
+      }
+
+      if (shelfName === "") {
+        errors["shelfName"] = "Shelf Name must not be blank";
+      }
+
+      return json({ errors });
+    }
+
     default:
       return null;
   }
@@ -137,6 +166,7 @@ type ShelfProps = {
 function Shelf({ shelf }: ShelfProps) {
   // useFetcher()
   const deleteShelfFetcher = useFetcher();
+  const saveShelfNameFetcher = useFetcher();
   const isDeleting =
     deleteShelfFetcher.formData?.get("_action") === "deleteShelf" &&
     deleteShelfFetcher.formData?.get("shelfId") === shelf.id;
@@ -149,7 +179,31 @@ function Shelf({ shelf }: ShelfProps) {
         "md:w-96"
       )}
     >
-      <h1 className="text-xl font-bold mb-2">{shelf.name}</h1>
+      <saveShelfNameFetcher.Form
+        method="post"
+        className="flex align-center mb-4"
+      >
+        <input type="hidden" name="shelfId" value={shelf.id} />
+        <input
+          className={classNames(
+            "text-xl font-bold pb-1 w-full outline-none",
+            "border-b-2 border-b-background focus:border-b-primary"
+          )}
+          defaultValue={shelf.name}
+          name="shelfName"
+          placeholder="Enter Shelf Name"
+          autoComplete="off"
+          required
+        />
+        <Button
+          name="_action"
+          value="saveShelfName"
+          otherClass="bg-gray-500 hover:bg-gray-400 border-white ml-4"
+        >
+          <SaveIcon />
+        </Button>
+      </saveShelfNameFetcher.Form>
+
       <ul>
         {shelf.items.map((item) => (
           <li key={item.id} className="py-2">
