@@ -4,13 +4,18 @@ import { classNames } from "~/utils/misc";
 type ButtonProps = {
   children: React.ReactNode;
   otherClass?: string;
+  isLoading?: boolean;
 } & ButtonHTMLAttributes<HTMLButtonElement>;
-export function Button({ children, otherClass, ...props }: ButtonProps) {
+export function Button({
+  children,
+  otherClass,
+  isLoading,
+  ...props
+}: ButtonProps) {
   return (
     <button
       className={classNames(
-        "flex px-3 py-2 rounded-lg justify-center",
-        "text-white bg-primary hover:bg-primary-light",
+        "flex px-3 py-2 rounded-xl justify-center text-white border-2 border-black",
         otherClass
       )}
       {...props}

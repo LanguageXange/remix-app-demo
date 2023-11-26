@@ -10,7 +10,11 @@ import {
   json,
   type ActionFunction,
 } from "@remix-run/node";
-import { createShelf, getAllShelves } from "~/models/pantry-shelf.server";
+import {
+  createShelf,
+  deleteShelf,
+  getAllShelves,
+} from "~/models/pantry-shelf.server";
 import { classNames } from "~/utils/misc";
 import { SearchIcon, PlusIcon } from "~/components/Icon";
 import { Button } from "~/components/Button";
@@ -29,8 +33,22 @@ export const loader: LoaderFunction = async ({
   return json({ shelves });
 };
 
-export const action: ActionFunction = async () => {
-  return createShelf();
+export const action: ActionFunction = async ({ request }) => {
+  const formData = await request.formData();
+  const buttonAction = formData.get("_action"); // this returns Button value attribute
+
+  switch (buttonAction) {
+    case "deleteShelf":
+      const shelfId = formData.get("shelfId"); // this value is from the hidden input
+      if (typeof shelfId !== "string") {
+        return json({ errors: { shelfId: "Shelf ID must be a string" } });
+      }
+      return deleteShelf(shelfId);
+    case "createShelf":
+      return createShelf();
+    default:
+      return null;
+  }
 };
 
 // remix handles the API layer for us and injects the data into the component tree
@@ -39,8 +57,7 @@ export default function Pantry() {
   const data = useLoaderData<typeof loader>() as LoaderData;
   const navigation = useNavigation();
   const isSearching = navigation.formData?.has("q");
-  const isCreatingShelf = navigation.formData?.has("createShelf");
-
+  const isCreatingShelf = navigation.formData?.get("_action") === "createShelf";
   const containerRef = useRef<HTMLUListElement>(null);
 
   useEffect(() => {
@@ -75,8 +92,9 @@ export default function Pantry() {
       <Form method="post">
         <Button
           type="submit"
-          otherClass="mt-4 w-full md:w-fit"
-          name="createShelf"
+          otherClass="bg-primary hover:bg-primary-light mt-4 w-full md:w-fit"
+          name="_action"
+          value="createShelf"
         >
           <PlusIcon />
           <span className="pl-2">
@@ -93,25 +111,42 @@ export default function Pantry() {
           "snap-x snap-mandatory md:snap-none"
         )}
       >
-        {data.shelves.map((shelf) => (
-          <li
-            key={shelf.id}
-            className={classNames(
-              "border-2 border-primary rounded-md p-4 h-fit",
-              "w-[calc(100vw-2rem)] flex-none snap-center",
-              "md:w-96"
-            )}
-          >
-            <h1 className="text-xl font-bold mb-2">{shelf.name}</h1>
-            <ul>
-              {shelf.items.map((item) => (
-                <li key={item.id} className="py-2">
-                  {item.name}
-                </li>
-              ))}
-            </ul>
-          </li>
-        ))}
+        {data.shelves.map((shelf) => {
+          const isDeleting =
+            navigation.formData?.get("_action") === "deleteShelf" &&
+            navigation.formData?.get("shelfId") === shelf.id;
+          return (
+            <li
+              key={shelf.id}
+              className={classNames(
+                "border-2 border-primary rounded-md p-4 h-fit",
+                "w-[calc(100vw-2rem)] flex-none snap-center",
+                "md:w-96"
+              )}
+            >
+              <h1 className="text-xl font-bold mb-2">{shelf.name}</h1>
+              <ul>
+                {shelf.items.map((item) => (
+                  <li key={item.id} className="py-2">
+                    {item.name}
+                  </li>
+                ))}
+
+                <Form method="post">
+                  <input type="hidden" name="shelfId" value={shelf.id} />
+                  <Button
+                    otherClass="w-full bg-red-500 hover:bg-red-400"
+                    name="_action"
+                    value="deleteShelf"
+                    disabled={isDeleting}
+                  >
+                    {isDeleting ? "Deleting ..." : "Delete Shelf"}
+                  </Button>
+                </Form>
+              </ul>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

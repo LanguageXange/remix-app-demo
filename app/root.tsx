@@ -9,7 +9,8 @@ import {
   ScrollRestoration,
   useNavigation,
   useResolvedPath,
-  useMatches,
+  Link,
+  useRouteError,
 } from "@remix-run/react";
 import { classNames } from "~/utils/misc";
 import styles from "./tailwind.css";
@@ -98,5 +99,34 @@ function AppNavLink({ to, children }: AppNavLinksProps) {
         )}
       </NavLink>
     </li>
+  );
+}
+
+export function ErrorBoundary() {
+  const error = useRouteError();
+  return (
+    <html>
+      <head>
+        <title>Whooooops!</title>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <Meta />
+        <Links />
+      </head>
+      <body>
+        <div className="p-4">
+          <h1 className="text-2xl pb-3">Whoooops!!</h1>
+          <p> You're seeing this because an error occurred</p>
+          {error instanceof Error ? (
+            <p className="my-4 font-bold"> {error.message}</p>
+          ) : null}
+
+          <Link to="/" classNAme="text-primary">
+            {" "}
+            Back to Home
+          </Link>
+        </div>
+      </body>
+    </html>
   );
 }
