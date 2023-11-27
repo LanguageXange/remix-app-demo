@@ -21,12 +21,21 @@ import { classNames } from "~/utils/misc";
 import { SearchIcon, PlusIcon, SaveIcon } from "~/components/Icon";
 import { Button } from "~/components/Button";
 import { useEffect, useRef } from "react";
+import { z } from "zod";
+import { validateform } from "~/utils/validation";
 
 type LoaderData = {
   shelves: Awaited<ReturnType<typeof getAllShelves>>;
 };
 
-type FieldError = { [key: string]: string };
+const saveShelfNameSchema = z.object({
+  shelfName: z.string().min(1, "Shelf Name cannot be blank!"), // here we can pass in custom error message
+  shelfId: z.string(),
+});
+
+const deleteShelfSchema = z.object({
+  shelfId: z.string(),
+});
 
 export const loader: LoaderFunction = async ({
   request,
@@ -42,40 +51,25 @@ export const action: ActionFunction = async ({ request }) => {
   const buttonAction = formData.get("_action"); // this returns Button value attribute
 
   switch (buttonAction) {
-    case "deleteShelf":
-      const shelfId = formData.get("shelfId"); // this value is from the hidden input
-      if (typeof shelfId !== "string") {
-        return json({ errors: { shelfId: "Shelf ID must be a string" } });
-      }
-      return deleteShelf(shelfId);
+    case "deleteShelf": {
+      return validateform(
+        formData,
+        deleteShelfSchema,
+        (data) => deleteShelf(data.shelfId),
+        (errors) => json({ errors })
+      );
+    }
+
     case "createShelf":
       return createShelf();
     case "saveShelfName": {
-      const shelfId = formData.get("shelfId");
-      const shelfName = formData.get("shelfName");
-      const errors: FieldError = {};
-      if (
-        typeof shelfId === "string" &&
-        typeof shelfName === "string" &&
-        shelfName !== ""
-      ) {
-        return saveShelfName(shelfId, shelfName);
-      }
-
-      if (typeof shelfId !== "string") {
-        errors["shelfId"] = "Shelf ID must be a string";
-      }
-      if (typeof shelfName !== "string") {
-        errors["shelfName"] = "Shelf Name must be a string";
-      }
-
-      if (shelfName === "") {
-        errors["shelfName"] = "Shelf Name must not be blank";
-      }
-
-      return json({ errors });
+      return validateform(
+        formData,
+        saveShelfNameSchema,
+        (data) => saveShelfName(data.shelfId, data.shelfName),
+        (errors) => json({ errors })
+      );
     }
-
     default:
       return null;
   }
@@ -164,12 +158,14 @@ type ShelfProps = {
 };
 
 function Shelf({ shelf }: ShelfProps) {
-  // useFetcher()
+  // useFetcher() can only be called at a component level that's why we extract the code to its own component
   const deleteShelfFetcher = useFetcher();
   const saveShelfNameFetcher = useFetcher();
   const isDeleting =
     deleteShelfFetcher.formData?.get("_action") === "deleteShelf" &&
     deleteShelfFetcher.formData?.get("shelfId") === shelf.id;
+
+  // console.log(saveShelfNameFetcher.data, "what is save name fetcher data");
   return (
     <li
       key={shelf.id}
@@ -183,18 +179,23 @@ function Shelf({ shelf }: ShelfProps) {
         method="post"
         className="flex align-center mb-4"
       >
-        <input type="hidden" name="shelfId" value={shelf.id} />
-        <input
-          className={classNames(
-            "text-xl font-bold pb-1 w-full outline-none",
-            "border-b-2 border-b-background focus:border-b-primary"
-          )}
-          defaultValue={shelf.name}
-          name="shelfName"
-          placeholder="Enter Shelf Name"
-          autoComplete="off"
-          required
-        />
+        <div className="w-full">
+          <input
+            className={classNames(
+              "text-xl font-bold pb-1 w-full outline-none",
+              "border-b-2 border-b-background focus:border-b-primary"
+            )}
+            defaultValue={shelf.name}
+            name="shelfName"
+            placeholder="Enter Shelf Name"
+            autoComplete="off"
+          />
+
+          <span className="text-red-600 text-xs">
+            {saveShelfNameFetcher.data?.errors?.shelfName}
+          </span>
+        </div>
+
         <Button
           name="_action"
           value="saveShelfName"
@@ -202,6 +203,7 @@ function Shelf({ shelf }: ShelfProps) {
         >
           <SaveIcon />
         </Button>
+        <input type="hidden" name="shelfId" value={shelf.id} />
       </saveShelfNameFetcher.Form>
 
       <ul>
