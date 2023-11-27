@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import db from "~/db.server";
+import { handleDelete } from "./utils";
 
 // model abstraction so that if anything changes to the API we only need to update this file
 export function getAllShelves(query: string | null) {
@@ -34,24 +35,14 @@ export function createShelf() {
 // code: 'P2025',
 // clientVersion: '5.6.0',
 // meta: { cause: 'Record to delete does not exist.' }
-export async function deleteShelf(shelfId: string) {
-  try {
-    const updatedDB = await db.pantryShelf.delete({
+export function deleteShelf(shelfId: string) {
+  return handleDelete(() =>
+    db.pantryShelf.delete({
       where: {
         id: shelfId,
       },
-    });
-
-    return updatedDB;
-  } catch (err) {
-    if (err instanceof Prisma.PrismaClientKnownRequestError) {
-      if (err.code === "P2025") {
-        console.log(err.message);
-        return err.message;
-      }
-    }
-    throw Error();
-  }
+    })
+  );
 }
 
 export async function saveShelfName(shelfId: string, shelfName: string) {
