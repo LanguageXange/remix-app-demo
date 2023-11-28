@@ -5,6 +5,7 @@ import {
   useNavigation,
   useSearchParams,
 } from "@remix-run/react";
+
 import {
   type LoaderFunction,
   type LoaderFunctionArgs,
@@ -18,11 +19,17 @@ import {
   saveShelfName,
 } from "~/models/pantry-shelf.server";
 import { createShelfItem, deleteShelfItem } from "~/models/pantry-item.server";
-import { classNames } from "~/utils/misc";
-import { SearchIcon, PlusIcon, SaveIcon, DeleteIcon } from "~/components/Icon";
+import { classNames, useIsHydrated, useServerLayoutEffect } from "~/utils/misc";
+import {
+  SearchIcon,
+  PlusIcon,
+  DeleteIcon,
+  EditIcon,
+  SmallPlusIcon,
+} from "~/components/Icon";
 import { Button } from "~/components/Button";
 import { ErrorMessage } from "~/components/ErrorMessage";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { validateform } from "~/utils/validation";
 
@@ -190,34 +197,53 @@ function Shelf({ shelf }: ShelfProps) {
   const deleteShelfFetcher = useFetcher();
   const saveShelfNameFetcher = useFetcher();
   const createShelfItemFetcher = useFetcher();
+
+  const createItemFormRef = useRef<HTMLFormElement>(null);
+  // optimistically creating shelf items
+  const { renderItems, addItem } = useOptimisticItems(
+    shelf.items,
+    createShelfItemFetcher.state
+  );
   const isDeleting =
     deleteShelfFetcher.formData?.get("_action") === "deleteShelf" &&
     deleteShelfFetcher.formData?.get("shelfId") === shelf.id;
 
   // console.log(saveShelfNameFetcher.data, "what is save name fetcher data");
+  const isHydrated = useIsHydrated();
   return isDeleting ? null : (
     <li
       key={shelf.id}
       className={classNames(
-        "border-2 border-primary rounded-md p-4 h-fit",
+        "border-2 border-primary rounded-2xl p-5 h-fit",
         "w-[calc(100vw-2rem)] flex-none snap-center",
         "md:w-96"
       )}
     >
-      <saveShelfNameFetcher.Form
-        method="post"
-        className="flex align-center mb-4"
-      >
-        <div className="w-full">
+      <saveShelfNameFetcher.Form method="post" className="flex items-center">
+        <div className="w-full peer">
           <input
             className={classNames(
-              "text-xl font-bold pb-1 w-full outline-none",
+              "text-xl font-bold w-full outline-none",
               "border-b-2 border-b-background focus:border-b-primary"
             )}
             defaultValue={shelf.name}
             name="shelfName"
             placeholder="Enter Shelf Name"
             autoComplete="off"
+            required
+            onChange={(e) =>
+              e.target.value !== "" &&
+              saveShelfNameFetcher.submit(
+                {
+                  _action: "saveShelfName",
+                  shelfName: e.target.value,
+                  shelfId: shelf.id,
+                },
+                {
+                  method: "post",
+                }
+              )
+            }
           />
 
           <ErrorMessage>
@@ -225,25 +251,54 @@ function Shelf({ shelf }: ShelfProps) {
           </ErrorMessage>
         </div>
 
-        <Button
-          name="_action"
-          value="saveShelfName"
-          otherClass="border-none ml-4"
-        >
-          <SaveIcon />
-        </Button>
+        {isHydrated ? null : (
+          <Button
+            name="_action"
+            value="saveShelfName"
+            otherClass={classNames(
+              "border-none ml-2 text-gray-800 mb-1 opacity-0 hover:opacity-100 focus:opacity-100",
+              "peer-focus-within:opacity-100"
+            )}
+          >
+            <EditIcon />
+          </Button>
+        )}
+
         <input type="hidden" name="shelfId" value={shelf.id} />
       </saveShelfNameFetcher.Form>
 
-      <createShelfItemFetcher.Form method="post" className="flex align-center">
-        <div className="w-full">
+      <createShelfItemFetcher.Form
+        method="post"
+        className="flex items-center"
+        ref={createItemFormRef}
+        onSubmit={(e) => {
+          const target = e.target as HTMLFormElement;
+          const itemNameInput = target.elements.namedItem(
+            "itemName"
+          ) as HTMLInputElement;
+          addItem(itemNameInput.value);
+          e.preventDefault();
+          createShelfItemFetcher.submit(
+            {
+              itemName: itemNameInput.value,
+              shelfId: shelf.id,
+              _action: "createShelfItem",
+            },
+            {
+              method: "post",
+            }
+          );
+          createItemFormRef.current?.reset();
+        }}
+      >
+        <div className="w-full peer">
           <input
             className={classNames(
-              "text-md pb-1 w-full outline-none",
+              "text-md w-full outline-none",
               "border-b-2 border-b-background focus:border-b-primary"
             )}
             name="itemName"
-            defaultValue=""
+            required
             placeholder="Enter Item Name"
             autoComplete="off"
           />
@@ -256,19 +311,30 @@ function Shelf({ shelf }: ShelfProps) {
         <Button
           name="_action"
           value="createShelfItem"
-          otherClass="border-none ml-4"
+          otherClass={classNames(
+            "border-none text-gray-800 opacity-0 hover:opacity-100 active:opacity-100",
+            "peer-focus-within:opacity-100"
+          )}
         >
-          <SaveIcon />
+          <SmallPlusIcon />
         </Button>
+
         <input type="hidden" name="shelfId" value={shelf.id} />
       </createShelfItemFetcher.Form>
 
-      <ul>
-        {shelf.items.map((item) => (
+      <ul className="mt-2">
+        {renderItems.map((item) => (
           <ShelfItem key={item.id} item={item} />
         ))}
 
-        <deleteShelfFetcher.Form method="post">
+        <deleteShelfFetcher.Form
+          method="post"
+          onSubmit={(e) => {
+            if (!confirm(`Are you sure you want to delete "${shelf.name}" ?`)) {
+              e.preventDefault(); // to prevent form from submitting
+            }
+          }}
+        >
           <input type="hidden" name="shelfId" value={shelf.id} />
           <ErrorMessage otherClass="mb-2">
             {deleteShelfFetcher.data?.errors?.shelfId}
@@ -287,22 +353,67 @@ function Shelf({ shelf }: ShelfProps) {
   );
 }
 type ShelfItemProps = {
-  item: Item;
+  item: RenderItem;
 };
 
 function ShelfItem({ item }: ShelfItemProps) {
   const deleteItemFetcher = useFetcher();
-  return (
+  const isDeleteingItem = !!deleteItemFetcher.formData;
+  return isDeleteingItem ? null : (
     <li className="flex justify-between">
       <p className="w-full my-2 border-b-2">{item.name}</p>
 
       <deleteItemFetcher.Form method="post">
         <input type="hidden" name="itemId" value={item.id} />
-        <Button otherClass="border-none" name="_action" value="deleteShelfItem">
-          <DeleteIcon />
-        </Button>
+        {item.isOptimistic ? null : (
+          <Button
+            otherClass="border-none"
+            name="_action"
+            value="deleteShelfItem"
+          >
+            <DeleteIcon />
+          </Button>
+        )}
+
         <ErrorMessage>{deleteItemFetcher.data?.errors?.itemId}</ErrorMessage>
       </deleteItemFetcher.Form>
     </li>
   );
+}
+
+type RenderItem = {
+  id: string;
+  name: string;
+  isOptimistic?: boolean;
+};
+
+function useOptimisticItems(
+  savedItems: RenderItem[],
+  createShelfItemState: "idle" | "submitting" | "loading"
+) {
+  const [optimisticItems, setOptimisticItems] = useState<Array<RenderItem>>([]);
+  const renderItems = [...optimisticItems, ...savedItems];
+  useServerLayoutEffect(() => {
+    if (createShelfItemState === "idle") {
+      setOptimisticItems([]);
+    }
+  }, [createShelfItemState]);
+
+  renderItems.sort((a, b) => {
+    if (a.name === b.name) return 0;
+    return a.name < b.name ? -1 : 1;
+  });
+
+  const addItem = (name: string) => {
+    setOptimisticItems((items) => [
+      ...items,
+      { id: createItemId(), name, isOptimistic: true },
+    ]);
+  };
+
+  return { addItem, renderItems };
+}
+
+function createItemId() {
+  return `${Math.round(Math.random() * 1_000_000)}`;
 }

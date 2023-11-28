@@ -1,5 +1,5 @@
 import { useMatches } from "@remix-run/react";
-import { useMemo } from "react";
+import { useLayoutEffect, useMemo, useEffect, useState } from "react";
 export function useMatchesData(id: string) {
   const matches = useMatches();
   const route = useMemo(
@@ -15,4 +15,29 @@ export function classNames(...names: Array<string | undefined>) {
     ""
   );
   return className || "";
+}
+
+export function isRunningOnServer() {
+  return typeof window === "undefined";
+}
+
+export const useServerLayoutEffect = isRunningOnServer()
+  ? useEffect
+  : useLayoutEffect;
+
+// we want this hook to return true the moment React is hydrated
+// to achieve this, need to reference a variable outside
+// the first time useHydrated is called, `hasHydrated` will be set to true
+// every other time this will return true immediately
+let hasHydrated = false;
+export function useIsHydrated() {
+  const [isHydrated, setIsHydrated] = useState(hasHydrated);
+  // React useEffect doesn't run during server rendering
+  // if an effect runs then we know React is successfully hydrated on the client
+  useEffect(() => {
+    hasHydrated = true;
+    setIsHydrated(true);
+  }, []);
+
+  return isHydrated;
 }
