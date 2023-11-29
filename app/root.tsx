@@ -19,6 +19,7 @@ import {
   DiscoverIcon,
   BookIcon,
   SettingIcon,
+  LoginIcon,
 } from "./components/Icon";
 import { useEffect } from "react";
 
@@ -41,7 +42,12 @@ export default function App() {
         <Links />
       </head>
       <body className="md:flex md:h-screen">
-        <nav className="bg-primary text-white">
+        <nav
+          className={classNames(
+            "bg-primary text-white",
+            "flex justify-between md:flex-col"
+          )}
+        >
           <ul className="flex md:flex-col">
             <AppNavLink to="/">
               <HomeIcon />
@@ -57,6 +63,12 @@ export default function App() {
 
             <AppNavLink to="settings">
               <SettingIcon />
+            </AppNavLink>
+          </ul>
+
+          <ul>
+            <AppNavLink to="login">
+              <LoginIcon />
             </AppNavLink>
           </ul>
         </nav>
