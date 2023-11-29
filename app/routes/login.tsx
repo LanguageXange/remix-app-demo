@@ -7,11 +7,12 @@ import { useActionData } from "@remix-run/react";
 import { z } from "zod";
 import { Button } from "~/components/Button";
 import { ErrorMessage } from "~/components/ErrorMessage";
-import { sessionCookie } from "~/cookies.server";
+import { generateMagicLink } from "~/magic-links.server";
 import { getUser } from "~/models/user.server";
 import { commitSession, getSession } from "~/sessions";
 import { classNames } from "~/utils/misc";
 import { validateform } from "~/utils/validation";
+import { v4 as uuid4 } from "uuid";
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -20,8 +21,6 @@ const loginSchema = z.object({
 export const loader: LoaderFunction = async ({ request }) => {
   const cookieHeader = request.headers.get("cookie");
   const session = await getSession(cookieHeader);
-  //const cookieValue = await sessionCookie.parse(cookieHeader);
-  //console.log(cookieValue, "cookie value");
   console.log(session.data, "session data");
   return null;
 };
@@ -35,24 +34,27 @@ export const action: ActionFunction = async ({ request }) => {
     formData,
     loginSchema,
     async ({ email }) => {
-      const user = await getUser(email);
-      if (user === null) {
-        return json(
-          { errors: { email: "Ooops! User does not exist " } },
-          { status: 401 }
-        );
-      }
+      const link = generateMagicLink(email, uuid4());
+      console.log(link, "what is link");
+      return json({ message: "ok" });
+      // const user = await getUser(email);
+      // if (user === null) {
+      //   return json(
+      //     { errors: { email: "Ooops! User does not exist " } },
+      //     { status: 401 }
+      //   );
+      // }
 
-      session.set("userId", user.id);
+      // session.set("userId", user.id);
 
-      return json(
-        { user },
-        {
-          headers: {
-            "Set-Cookie": await commitSession(session), // it was await sessionCookie.serialize({ userId: user.id })
-          },
-        }
-      );
+      // return json(
+      //   { user },
+      //   {
+      //     headers: {
+      //       "Set-Cookie": await commitSession(session),
+      //     },
+      //   }
+      // );
     },
     (errors) => json({ errors, email: formData.get("email") }, { status: 400 })
   );
