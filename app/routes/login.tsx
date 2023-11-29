@@ -1,12 +1,15 @@
 import {
   json,
   type ActionFunction,
-  type HeadersFunction,
+  type LoaderFunction,
 } from "@remix-run/node";
 import { useActionData } from "@remix-run/react";
 import { z } from "zod";
 import { Button } from "~/components/Button";
 import { ErrorMessage } from "~/components/ErrorMessage";
+import { sessionCookie } from "~/cookies.server";
+import { getUser } from "~/models/user.server";
+import { commitSession, getSession } from "~/sessions";
 import { classNames } from "~/utils/misc";
 import { validateform } from "~/utils/validation";
 
@@ -14,17 +17,43 @@ const loginSchema = z.object({
   email: z.string().email(),
 });
 
-export const headers: HeadersFunction = () => ({
-  "Set-Cookie": "remix-recipes-cookie=myValue",
-});
+export const loader: LoaderFunction = async ({ request }) => {
+  const cookieHeader = request.headers.get("cookie");
+  const session = await getSession(cookieHeader);
+  //const cookieValue = await sessionCookie.parse(cookieHeader);
+  //console.log(cookieValue, "cookie value");
+  console.log(session.data, "session data");
+  return null;
+};
 
 export const action: ActionFunction = async ({ request }) => {
   const formData = await request.formData();
+  const cookieHeader = request.headers.get("cookie");
+  const session = await getSession(cookieHeader);
 
   return validateform(
     formData,
     loginSchema,
-    () => {},
+    async ({ email }) => {
+      const user = await getUser(email);
+      if (user === null) {
+        return json(
+          { errors: { email: "Ooops! User does not exist " } },
+          { status: 401 }
+        );
+      }
+
+      session.set("userId", user.id);
+
+      return json(
+        { user },
+        {
+          headers: {
+            "Set-Cookie": await commitSession(session), // it was await sessionCookie.serialize({ userId: user.id })
+          },
+        }
+      );
+    },
     (errors) => json({ errors, email: formData.get("email") }, { status: 400 })
   );
 };
