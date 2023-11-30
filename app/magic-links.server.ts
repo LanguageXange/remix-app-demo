@@ -30,7 +30,7 @@ export function generateMagicLink(email: string, nonce: string) {
   return url.toString();
 }
 
-// helper function
+// helper function for type checking
 function isMagicLinkPayload(value: any): value is MagicLinkPayload {
   return (
     typeof value === "object" &&
@@ -40,10 +40,13 @@ function isMagicLinkPayload(value: any): value is MagicLinkPayload {
   );
 }
 
-function invalidMessage(message: string) {
+// helper function for formatting error message
+
+export function invalidMessage(message: string) {
   return json({ message }, { status: 400 });
 }
 
+// decrypt/ parsing magic link
 export function getMagicPayload(request: Request) {
   const url = new URL(request.url);
   const payload = url.searchParams.get("magic");

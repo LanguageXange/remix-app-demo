@@ -13,6 +13,7 @@ import { commitSession, getSession } from "~/sessions";
 import { classNames } from "~/utils/misc";
 import { validateform } from "~/utils/validation";
 import { v4 as uuid4 } from "uuid";
+import { PrimaryInput } from "~/components/Input";
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -34,27 +35,18 @@ export const action: ActionFunction = async ({ request }) => {
     formData,
     loginSchema,
     async ({ email }) => {
-      const link = generateMagicLink(email, uuid4());
+      const nonce = uuid4();
+      session.set("nonce", nonce); // using session.flash will cause issue if we refresh the validate-magic-link route
+      const link = generateMagicLink(email, nonce);
       console.log(link, "what is link");
-      return json({ message: "ok" });
-      // const user = await getUser(email);
-      // if (user === null) {
-      //   return json(
-      //     { errors: { email: "Ooops! User does not exist " } },
-      //     { status: 401 }
-      //   );
-      // }
-
-      // session.set("userId", user.id);
-
-      // return json(
-      //   { user },
-      //   {
-      //     headers: {
-      //       "Set-Cookie": await commitSession(session),
-      //     },
-      //   }
-      // );
+      return json(
+        { message: "ok" },
+        {
+          headers: {
+            "Set-Cookie": await commitSession(session),
+          },
+        }
+      );
     },
     (errors) => json({ errors, email: formData.get("email") }, { status: 400 })
   );
@@ -67,16 +59,12 @@ export default function Login() {
       <h1 className="text-3xl mb-8"> Remix Recipes Login </h1>
       <form method="post" className="mx-auto md:w-1/3">
         <div className="text-left pb-4">
-          <input
+          <PrimaryInput
             type="email"
             name="email"
             placeholder="Email"
             defaultValue={actionData?.email}
             autoComplete="off"
-            className={classNames(
-              "w-full outline-none border-2 border-gray-200",
-              "focus:border-primary rounded-lg p-2"
-            )}
           />
           <ErrorMessage>{actionData?.errors?.email}</ErrorMessage>
         </div>
