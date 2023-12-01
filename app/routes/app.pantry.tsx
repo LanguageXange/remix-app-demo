@@ -40,6 +40,7 @@ import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { validateform } from "~/utils/validation";
 import { type getCurrentUser, requireLoggedInUser } from "~/utils/auth.server";
+import { SearchBar } from "~/components/SearchBar";
 
 type LoaderData = {
   shelves: Awaited<ReturnType<typeof getAllShelves>>;
@@ -159,11 +160,8 @@ export const action: ActionFunction = async ({ request }) => {
 
 // remix handles the API layer for us and injects the data into the component tree
 export default function Pantry() {
-  const [searchParam] = useSearchParams();
   const data = useLoaderData<typeof loader>() as LoaderData;
-  const navigation = useNavigation();
   const createShelfFetcher = useFetcher();
-  const isSearching = navigation.formData?.has("q");
   const isCreatingShelf =
     createShelfFetcher.formData?.get("_action") === "createShelf";
   const containerRef = useRef<HTMLUListElement>(null);
@@ -177,26 +175,9 @@ export default function Pantry() {
   return (
     <div>
       <h2 className="mb-3"> Welcome Back ! {data?.user?.firstName} </h2>
-      <Form
-        className={classNames(
-          "flex border-2 border-gray-400 rounded-md",
-          "focus-within:border-primary md:w-80",
-          isSearching ? "animate-pulse" : "",
-          isCreatingShelf ? "bg-primary-light" : ""
-        )}
-      >
-        <button className="px-2 mr-1">
-          <SearchIcon />
-        </button>
-        <input
-          defaultValue={searchParam.get("q") ?? ""}
-          type="text"
-          name="q"
-          autoComplete="off"
-          placeholder="Searching shelves ..."
-          className="p-2 w-full outline-none"
-        />
-      </Form>
+
+      <SearchBar placeholderText="Search Shelves ..." otherClass="md:w-80" />
+
       <createShelfFetcher.Form method="post">
         <Button
           type="submit"
@@ -260,7 +241,7 @@ function Shelf({ shelf }: ShelfProps) {
     <li
       key={shelf.id}
       className={classNames(
-        "border-2 border-primary rounded-2xl p-5 h-fit",
+        "border-2 border-primary rounded-2xl p-5 h-fit shadow-lg shadow-gray-300",
         "w-[calc(100vw-2rem)] flex-none snap-center",
         "md:w-96"
       )}

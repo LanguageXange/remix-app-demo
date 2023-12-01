@@ -13,5 +13,5 @@ import type { LoaderFunction } from "@remix-run/node";
 // };
 
 export const loader: LoaderFunction = () => {
-  return redirect("/app/pantry", 302);
+  return redirect("/app/recipes", 302);
 };
