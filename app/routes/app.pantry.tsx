@@ -16,9 +16,14 @@ import {
   createShelf,
   deleteShelf,
   getAllShelves,
+  getShelfById,
   saveShelfName,
 } from "~/models/pantry-shelf.server";
-import { createShelfItem, deleteShelfItem } from "~/models/pantry-item.server";
+import {
+  createShelfItem,
+  deleteShelfItem,
+  getShelfItemById,
+} from "~/models/pantry-item.server";
 import { classNames, useIsHydrated, useServerLayoutEffect } from "~/utils/misc";
 import {
   SearchIcon,
@@ -32,9 +37,11 @@ import { ErrorMessage } from "~/components/ErrorMessage";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { validateform } from "~/utils/validation";
+import { type getCurrentUser, requireLoggedInUser } from "~/utils/auth.server";
 
 type LoaderData = {
   shelves: Awaited<ReturnType<typeof getAllShelves>>;
+  user: Awaited<ReturnType<typeof getCurrentUser>>;
 };
 
 const saveShelfNameSchema = z.object({
@@ -58,13 +65,15 @@ const deleteShelfItemSchema = z.object({
 export const loader: LoaderFunction = async ({
   request,
 }: LoaderFunctionArgs) => {
+  const user = await requireLoggedInUser(request);
   const url = new URL(request.url);
   const query = url.searchParams.get("q");
-  const shelves = await getAllShelves(query);
-  return json({ shelves });
+  const shelves = await getAllShelves(user.id, query);
+  return json({ shelves, user });
 };
 
 export const action: ActionFunction = async ({ request }) => {
+  const user = await requireLoggedInUser(request);
   const formData = await request.formData();
   const buttonAction = formData.get("_action"); // this returns Button value attribute
 
@@ -73,18 +82,36 @@ export const action: ActionFunction = async ({ request }) => {
       return validateform(
         formData,
         deleteShelfSchema,
-        (data) => deleteShelf(data.shelfId),
+        async (data) => {
+          const shelf = await getShelfById(data.shelfId);
+          if (shelf && shelf.userId !== user.id) {
+            throw json(
+              { message: "this shelf is not yours so you cannot delete it " },
+              { status: 401 }
+            );
+          }
+          return deleteShelf(data.shelfId);
+        },
         (errors) => json({ errors }, { status: 400 })
       );
     }
 
     case "createShelf":
-      return createShelf();
+      return createShelf(user.id);
     case "saveShelfName": {
       return validateform(
         formData,
         saveShelfNameSchema,
-        (data) => saveShelfName(data.shelfId, data.shelfName),
+        async (data) => {
+          const shelf = await getShelfById(data.shelfId);
+          if (shelf && shelf.userId !== user.id) {
+            throw json(
+              { message: "this shelf is not yours so you cannot update it " },
+              { status: 401 }
+            );
+          }
+          return saveShelfName(data.shelfId, data.shelfName);
+        },
         (errors) => json({ errors }, { status: 400 })
       );
     }
@@ -93,7 +120,7 @@ export const action: ActionFunction = async ({ request }) => {
       return validateform(
         formData,
         createShelfItemSchema,
-        (data) => createShelfItem(data.shelfId, data.itemName),
+        (data) => createShelfItem(user.id, data.shelfId, data.itemName),
         (errors) => json({ errors }, { status: 400 })
       );
     }
@@ -101,7 +128,16 @@ export const action: ActionFunction = async ({ request }) => {
       return validateform(
         formData,
         deleteShelfItemSchema,
-        (data) => deleteShelfItem(data.itemId),
+        async (data) => {
+          const item = await getShelfItemById(data.itemId);
+          if (item && item.userId !== user.id) {
+            throw json(
+              { message: "this item is not yours so you cannot delete it " },
+              { status: 401 }
+            );
+          }
+          return deleteShelfItem(data.itemId);
+        },
         (errors) => json({ errors }, { status: 400 })
       );
     }
@@ -129,6 +165,7 @@ export default function Pantry() {
 
   return (
     <div>
+      <h2 className="mb-3"> Welcome Back ! {data?.user?.firstName} </h2>
       <Form
         className={classNames(
           "flex border-2 border-gray-400 rounded-md",
@@ -149,7 +186,6 @@ export default function Pantry() {
           className="p-2 w-full outline-none"
         />
       </Form>
-
       <createShelfFetcher.Form method="post">
         <Button
           type="submit"
@@ -164,7 +200,6 @@ export default function Pantry() {
           </span>
         </Button>
       </createShelfFetcher.Form>
-
       <ul
         ref={containerRef}
         className={classNames(

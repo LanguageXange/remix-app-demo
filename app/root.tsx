@@ -133,7 +133,7 @@ export function ErrorBoundary() {
             <p className="my-4 font-bold"> {error.message}</p>
           ) : null}
 
-          <Link to="/" classNAme="text-primary">
+          <Link to="/" className="text-primary">
             {" "}
             Back to Home
           </Link>

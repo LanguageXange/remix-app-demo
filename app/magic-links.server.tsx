@@ -1,5 +1,6 @@
 import { json } from "@remix-run/node";
 import Cryptr from "cryptr";
+import { renderToStaticMarkup } from "react-dom/server";
 if (typeof process.env.MAGIC_LINK_SECRET !== "string") {
   throw new Error("Missing env: MAGIC_LINK_SECRET");
 }
@@ -61,3 +62,26 @@ export function getMagicPayload(request: Request) {
 
   return decryptedPayload;
 }
+
+// export function sendMagicLinkEmail(link: string, email: string) {
+//   if (process.env.NODE_ENV === "production") {
+//     const html = renderToStaticMarkup(
+//       <div>
+//         <h1>Log in to Remix Recipes</h1>
+//         <p>
+//           Hey, there! Click the link below to finish logging in to the Remix
+//           Recipes app.
+//         </p>
+//         <a href={link}>Log In</a>
+//       </div>
+//     );
+//     return sendEmail({
+//       from: "Remix Recipes <xxxx@gmail.com",
+//       to: email,
+//       subject: "Log in to Remix Recipes!",
+//       html,
+//     });
+//   } else {
+//     console.log(link);
+//   }
+// }

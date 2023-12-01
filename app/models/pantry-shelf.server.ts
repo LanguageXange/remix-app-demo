@@ -1,11 +1,11 @@
-import { Prisma } from "@prisma/client";
 import db from "~/db.server";
 import { handleDelete } from "./utils";
 
 // model abstraction so that if anything changes to the API we only need to update this file
-export function getAllShelves(query: string | null) {
+export function getAllShelves(userId: string, query: string | null) {
   return db.pantryShelf.findMany({
     where: {
+      userId,
       name: {
         contains: query ?? "",
         mode: "insensitive",
@@ -24,9 +24,10 @@ export function getAllShelves(query: string | null) {
   });
 }
 
-export function createShelf() {
+export function createShelf(userId: string) {
   return db.pantryShelf.create({
     data: {
+      userId,
       name: "My New Shelf",
     },
   });
@@ -54,4 +55,8 @@ export async function saveShelfName(shelfId: string, shelfName: string) {
       name: shelfName,
     },
   });
+}
+
+export function getShelfById(id: string) {
+  return db.pantryShelf.findUnique({ where: { id } });
 }
