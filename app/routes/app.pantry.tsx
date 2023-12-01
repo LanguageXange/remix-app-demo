@@ -1,8 +1,10 @@
 import {
   Form,
+  isRouteErrorResponse,
   useFetcher,
   useLoaderData,
   useNavigation,
+  useRouteError,
   useSearchParams,
 } from "@remix-run/react";
 
@@ -86,7 +88,10 @@ export const action: ActionFunction = async ({ request }) => {
           const shelf = await getShelfById(data.shelfId);
           if (shelf && shelf.userId !== user.id) {
             throw json(
-              { message: "this shelf is not yours so you cannot delete it " },
+              {
+                message:
+                  "Sorry! This shelf is not yours so you cannot delete it ",
+              },
               { status: 401 }
             );
           }
@@ -106,7 +111,10 @@ export const action: ActionFunction = async ({ request }) => {
           const shelf = await getShelfById(data.shelfId);
           if (shelf && shelf.userId !== user.id) {
             throw json(
-              { message: "this shelf is not yours so you cannot update it " },
+              {
+                message:
+                  "Sorry! This shelf is not yours so you cannot update the name ",
+              },
               { status: 401 }
             );
           }
@@ -132,7 +140,10 @@ export const action: ActionFunction = async ({ request }) => {
           const item = await getShelfItemById(data.itemId);
           if (item && item.userId !== user.id) {
             throw json(
-              { message: "this item is not yours so you cannot delete it " },
+              {
+                message:
+                  "Sorry! This item is not yours so you cannot delete it ",
+              },
               { status: 401 }
             );
           }
@@ -451,4 +462,27 @@ function useOptimisticItems(
 
 function createItemId() {
   return `${Math.round(Math.random() * 1_000_000)}`;
+}
+
+export function ErrorBoundary() {
+  const error = useRouteError();
+  console.log(error);
+
+  return (
+    <div className="bg-red-500 text-white rounded-md p-4 w-fit">
+      {isRouteErrorResponse(error) ? (
+        <>
+          {" "}
+          <h2 className="mb-2">
+            {error.status} - {error.statusText}
+          </h2>
+          <p>{error.data.message}</p>
+        </>
+      ) : (
+        <>
+          <h2 className="mb-2">An unexpected error occurred.</h2>
+        </>
+      )}
+    </div>
+  );
 }

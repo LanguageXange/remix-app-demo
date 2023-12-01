@@ -1,4 +1,9 @@
-import type { MetaFunction, LinksFunction } from "@remix-run/node";
+import {
+  type MetaFunction,
+  type LinksFunction,
+  type LoaderFunction,
+  json,
+} from "@remix-run/node";
 import {
   Links,
   NavLink,
@@ -11,6 +16,8 @@ import {
   useResolvedPath,
   Link,
   useRouteError,
+  isRouteErrorResponse,
+  useLoaderData,
 } from "@remix-run/react";
 import { classNames } from "~/utils/misc";
 import styles from "./tailwind.css";
@@ -20,8 +27,10 @@ import {
   BookIcon,
   SettingIcon,
   LoginIcon,
+  LogoutIcon,
 } from "./components/Icon";
 import { useEffect } from "react";
+import { getCurrentUser } from "./utils/auth.server";
 
 export const links: LinksFunction = () => [{ rel: "stylesheet", href: styles }];
 
@@ -32,7 +41,14 @@ export const meta: MetaFunction = () => {
   ];
 };
 
+export const loader: LoaderFunction = async ({ request }) => {
+  const user = await getCurrentUser(request);
+
+  return json({ isLoggedIn: user !== null });
+};
+
 export default function App() {
+  const data = useLoaderData<typeof loader>();
   return (
     <html lang="en">
       <head>
@@ -57,9 +73,11 @@ export default function App() {
               <DiscoverIcon />
             </AppNavLink>
 
-            <AppNavLink to="app/pantry">
-              <BookIcon />
-            </AppNavLink>
+            {data.isLoggedIn ? (
+              <AppNavLink to="app/pantry">
+                <BookIcon />
+              </AppNavLink>
+            ) : null}
 
             <AppNavLink to="settings">
               <SettingIcon />
@@ -67,9 +85,21 @@ export default function App() {
           </ul>
 
           <ul>
-            <AppNavLink to="login">
-              <LoginIcon />
-            </AppNavLink>
+            {data.isLoggedIn ? (
+              <AppNavLink
+                to="logout"
+                clickFn={(e) => {
+                  if (!confirm("are you sure you want to log out?"))
+                    e.preventDefault();
+                }}
+              >
+                <LogoutIcon />
+              </AppNavLink>
+            ) : (
+              <AppNavLink to="login">
+                <LoginIcon />
+              </AppNavLink>
+            )}
           </ul>
         </nav>
         <div className="p-4 w-full md:w-[calc(100%-4rem)]">
@@ -87,9 +117,10 @@ export default function App() {
 type AppNavLinksProps = {
   to: string;
   children: React.ReactNode;
+  clickFn?: (e: React.MouseEvent<Element, MouseEvent>) => void;
 };
 
-function AppNavLink({ to, children }: AppNavLinksProps) {
+function AppNavLink({ to, children, clickFn }: AppNavLinksProps) {
   const navigation = useNavigation();
   const path = useResolvedPath(to);
   const isLoading =
@@ -97,11 +128,11 @@ function AppNavLink({ to, children }: AppNavLinksProps) {
     navigation.location.pathname === path.pathname;
   return (
     <li className="w-16">
-      <NavLink to={to}>
+      <NavLink to={to} onClick={(e) => clickFn && clickFn(e)}>
         {({ isActive }) => (
           <div
             className={classNames(
-              "py-4 flex justify-center hover:bg-primary-light",
+              "py-4 flex justify-center  hover:bg-primary-light",
               isActive ? "bg-primary-light" : "",
               isLoading ? "animate-pulse bg-primary-light" : ""
             )}
@@ -116,6 +147,7 @@ function AppNavLink({ to, children }: AppNavLinksProps) {
 
 export function ErrorBoundary() {
   const error = useRouteError();
+
   return (
     <html>
       <head>
@@ -127,11 +159,25 @@ export function ErrorBoundary() {
       </head>
       <body>
         <div className="p-4">
-          <h1 className="text-2xl pb-3">Whoooops!!</h1>
-          <p> You're seeing this because an error occurred</p>
-          {error instanceof Error ? (
-            <p className="my-4 font-bold"> {error.message}</p>
-          ) : null}
+          {isRouteErrorResponse(error) ? (
+            <>
+              <h1 className="text-2xl pb-3">
+                {" "}
+                Route Error: {error.status} - {error.statusText}
+              </h1>
+              <p> You're seeing this because an error occurred</p>
+              <p className="my-4 font-bold"> Details: {error.data.message}</p>
+            </>
+          ) : (
+            <>
+              {" "}
+              <h1 className="text-2xl pb-3">Whoooops!!</h1>
+              <p> You're seeing this because an error occurred</p>
+              {error instanceof Error ? (
+                <p className="my-4 font-bold"> {error.message}</p>
+              ) : null}
+            </>
+          )}
 
           <Link to="/" className="text-primary">
             {" "}
