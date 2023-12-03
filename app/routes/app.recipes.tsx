@@ -1,5 +1,19 @@
-import { json, type LoaderFunction } from "@remix-run/node";
-import { NavLink, Outlet, useLoaderData } from "@remix-run/react";
+import {
+  type ActionFunctionArgs,
+  json,
+  type LoaderFunction,
+  redirect,
+} from "@remix-run/node";
+import {
+  Form,
+  NavLink,
+  Outlet,
+  useLoaderData,
+  useLocation,
+  useNavigation,
+} from "@remix-run/react";
+import { Button } from "~/components/Button";
+import { PlusIcon } from "~/components/Icon";
 import {
   RecipeCard,
   RecipeDetailWrapper,
@@ -9,6 +23,22 @@ import {
 import { SearchBar } from "~/components/SearchBar";
 import db from "~/db.server";
 import { requireLoggedInUser } from "~/utils/auth.server";
+
+export const action = async ({ request }: ActionFunctionArgs) => {
+  const user = await requireLoggedInUser(request);
+  const recipe = await db.myRecipe.create({
+    data: {
+      userId: user.id,
+      name: "New Recipe",
+      totalTime: "0 min",
+      imageUrl: "https://via.placeholder.com/150?text=Remix+Recipes",
+      instructions: "to be created",
+    },
+  });
+  const url = new URL(request.url); // this will contain the original search query
+  url.pathname = `/app/recipes/${recipe.id}`;
+  return redirect(url.toString());
+};
 
 export const loader: LoaderFunction = async ({ request }) => {
   const user = await requireLoggedInUser(request);
@@ -24,6 +54,7 @@ export const loader: LoaderFunction = async ({ request }) => {
       },
     },
     select: { name: true, id: true, imageUrl: true, totalTime: true },
+    orderBy: { createdAt: "desc" },
   });
 
   return json({ recipes });
@@ -41,21 +72,41 @@ type LoaderData = {
 };
 export default function Recipes() {
   const data = useLoaderData<typeof loader>() as LoaderData;
+  const location = useLocation(); // gives you the current location object
+  const navigation = useNavigation(); // navigation.location tells ou what the next location will be
 
   return (
     <RecipePageWrapper>
       <RecipeListWrapper>
         <SearchBar placeholderText="Search recipes..." />
+
+        <Form method="post" className="mt-4">
+          <Button otherClass="bg-primary" name="" value="">
+            <PlusIcon />
+            <span className="pl-2"> Create New Recipe</span>
+          </Button>
+        </Form>
+
         <ul>
-          {data?.recipes.map((recipe) => (
-            <li className="my-4" key={recipe.id}>
-              <NavLink to={recipe.id}>
-                {({ isActive }) => (
-                  <RecipeCard {...recipe} isActive={isActive} />
-                )}
-              </NavLink>
-            </li>
-          ))}
+          {data?.recipes.map((recipe) => {
+            const isLoading = navigation.location?.pathname.endsWith(recipe.id); // check if we've navigated to the recipe detail page
+            return (
+              <li className="my-4" key={recipe.id}>
+                <NavLink
+                  to={{ pathname: recipe.id, search: location.search }}
+                  prefetch="intent" // prefetches when the user hovers or focuses the link
+                >
+                  {({ isActive }) => (
+                    <RecipeCard
+                      {...recipe}
+                      isActive={isActive}
+                      isLoading={isLoading}
+                    />
+                  )}
+                </NavLink>
+              </li>
+            );
+          })}
         </ul>
       </RecipeListWrapper>
 

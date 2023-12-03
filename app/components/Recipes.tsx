@@ -35,6 +35,7 @@ export function RecipeDetailWrapper({ children }: RecipeDetailWrapperProps) {
   return <div className="lg:w-2/3 overflow-auto pr-4 pl-4">{children}</div>;
 }
 
+// custom hook
 function useDelayedBool(value: boolean | undefined, delay: number) {
   const [delayed, setDelayed] = React.useState(false);
   const timeoutId = React.useRef<number>();

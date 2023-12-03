@@ -15,7 +15,7 @@ export function Button({
   return (
     <button
       className={classNames(
-        "flex px-3 py-2 rounded-xl justify-center text-white border-2 border-black",
+        "flex px-3 py-2 rounded-xl justify-center text-white",
         otherClass
       )}
       {...props}

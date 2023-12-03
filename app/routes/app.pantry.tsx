@@ -41,6 +41,7 @@ import { z } from "zod";
 import { validateform } from "~/utils/validation";
 import { type getCurrentUser, requireLoggedInUser } from "~/utils/auth.server";
 import { SearchBar } from "~/components/SearchBar";
+import { GeneralInput } from "~/components/Input";
 
 type LoaderData = {
   shelves: Awaited<ReturnType<typeof getAllShelves>>;
@@ -248,16 +249,14 @@ function Shelf({ shelf }: ShelfProps) {
     >
       <saveShelfNameFetcher.Form method="post" className="flex items-center">
         <div className="w-full peer">
-          <input
-            className={classNames(
-              "text-xl font-bold w-full outline-none",
-              "border-b-2 border-b-background focus:border-b-primary"
-            )}
+          <GeneralInput
+            required
+            otherClass="text-xl font-bold"
+            error={!!saveShelfNameFetcher.data?.errors?.shelfName}
             defaultValue={shelf.name}
             name="shelfName"
             placeholder="Enter Shelf Name"
             autoComplete="off"
-            required
             onChange={(e) =>
               e.target.value !== "" &&
               saveShelfNameFetcher.submit(
@@ -283,7 +282,7 @@ function Shelf({ shelf }: ShelfProps) {
             name="_action"
             value="saveShelfName"
             otherClass={classNames(
-              "border-none ml-2 text-gray-800 mb-1 opacity-0 hover:opacity-100 focus:opacity-100",
+              "ml-2 text-gray-800 mb-1 opacity-0 hover:opacity-100 focus:opacity-100",
               "peer-focus-within:opacity-100"
             )}
           >
@@ -339,7 +338,7 @@ function Shelf({ shelf }: ShelfProps) {
           name="_action"
           value="createShelfItem"
           otherClass={classNames(
-            "border-none text-gray-800 opacity-0 hover:opacity-100 active:opacity-100",
+            "text-gray-800 opacity-0 hover:opacity-100 active:opacity-100",
             "peer-focus-within:opacity-100"
           )}
         >
@@ -393,11 +392,7 @@ function ShelfItem({ item }: ShelfItemProps) {
       <deleteItemFetcher.Form method="post">
         <input type="hidden" name="itemId" value={item.id} />
         {item.isOptimistic ? null : (
-          <Button
-            otherClass="border-none"
-            name="_action"
-            value="deleteShelfItem"
-          >
+          <Button name="_action" value="deleteShelfItem">
             <DeleteIcon />
           </Button>
         )}

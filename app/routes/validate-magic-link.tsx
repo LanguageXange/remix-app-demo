@@ -121,9 +121,7 @@ export default function MagicLinkRoute() {
               <ErrorMessage>{actionData?.errors?.lastName}</ErrorMessage>
             </div>
           </fieldset>
-          <Button otherClass="border-none bg-blue-500 hover:bg-blue-400">
-            Sign Up
-          </Button>
+          <Button otherClass="bg-blue-500 hover:bg-blue-400">Sign Up</Button>
         </form>
       </div>
     </div>
