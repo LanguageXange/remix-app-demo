@@ -8,21 +8,42 @@ import { Fragment } from "react";
 import { z } from "zod";
 import { Button } from "~/components/Button";
 import { ErrorMessage } from "~/components/ErrorMessage";
-import { DeleteIcon, EditIcon, TimeIcon } from "~/components/Icon";
+import { DeleteIcon, EditIcon, SaveIcon, TimeIcon } from "~/components/Icon";
 import { GeneralInput } from "~/components/Input";
 
 import db from "~/db.server";
 import { classNames } from "~/utils/misc";
 import { validateform } from "~/utils/validation";
 
-const saveRecipeSchema = z.object({
-  recipeName: z.string().min(1, "recipe name cannot be blank"),
-  totalTime: z.string().min(1, "total time cannot be blank"),
-  instructions: z.string().min(1, "instructions cannot be blank"),
+const saveRecipeSchema = z
+  .object({
+    recipeName: z.string().min(1, "recipe name cannot be blank"),
+    totalTime: z.string().min(1, "total time cannot be blank"),
+    instructions: z.string().min(1, "instructions cannot be blank"),
+    ingredientIds: z.array(z.string().min(1, "id is missing")).optional(),
+    ingredientAmounts: z.array(z.string().nullable()).optional(),
+    ingredientNames: z
+      .array(z.string().min(1, "ingredient name cannot be blank"))
+      .optional(),
+  })
+  .refine(
+    (data) =>
+      data.ingredientIds?.length === data.ingredientAmounts?.length &&
+      data.ingredientIds?.length === data.ingredientNames?.length,
+    { message: "Ingredient arrays must all be the same length" }
+  );
+
+// use refine to verify that the three ingredient lists are all the same length otherwise someone could remove the element from the DOM and submit the form - potentially saving invalid ingredients
+
+const createIngredientSchema = z.object({
+  newIngredientAmt: z.string().nullable(),
+  newIngredientName: z.string().min(1, "name cannot be blank"),
 });
+
 export const action: ActionFunction = async ({ request, params }) => {
   const formData = await request.formData();
   const btnAction = formData.get("_action");
+  const recipeId = String(params.recipeid);
   switch (btnAction) {
     case "saveRecipe":
       // save recipe
@@ -33,12 +54,21 @@ export const action: ActionFunction = async ({ request, params }) => {
           // update db
           return db.myRecipe.update({
             where: {
-              id: params.recipeid,
+              id: recipeId,
             },
             data: {
               name: data.recipeName,
               totalTime: data.totalTime,
               instructions: data.instructions,
+              ingredients: {
+                updateMany: data.ingredientIds?.map((id, index) => ({
+                  where: { id },
+                  data: {
+                    amount: data.ingredientAmounts?.[index],
+                    name: data.ingredientNames?.[index],
+                  },
+                })),
+              },
             },
           });
         },
@@ -47,6 +77,21 @@ export const action: ActionFunction = async ({ request, params }) => {
     case "deleteRecipe":
       return null;
 
+    case "createIngredient":
+      return validateform(
+        formData,
+        createIngredientSchema,
+        ({ newIngredientAmt, newIngredientName }) => {
+          return db.ingredient.create({
+            data: {
+              recipeId,
+              amount: newIngredientAmt || "",
+              name: newIngredientName,
+            },
+          });
+        },
+        (errors) => json({ errors }, { status: 400 })
+      );
     default:
       return null;
   }
@@ -62,6 +107,9 @@ export const loader: LoaderFunction = async ({ params }) => {
           name: true,
           amount: true,
         },
+        orderBy: {
+          createdAt: "asc",
+        },
       },
     },
   });
@@ -76,7 +124,7 @@ export default function RecipeDetail() {
   const actionData = useActionData<typeof action>();
 
   return (
-    <Form method="post">
+    <Form method="post" reloadDocument>
       <div className="mb-2">
         <GeneralInput
           key={data.currentRecipe?.id}
@@ -110,10 +158,11 @@ export default function RecipeDetail() {
 
         {data.currentRecipe?.ingredients.map((ingredient) => (
           <Fragment key={ingredient.id}>
+            <input type="hidden" name="ingredientIds[]" value={ingredient.id} />
             <div>
               <GeneralInput
                 autoComplete="off"
-                name="ingredientAmount"
+                name="ingredientAmounts[]"
                 defaultValue={ingredient.amount ?? ""}
               />
               <ErrorMessage>test error</ErrorMessage>
@@ -122,7 +171,7 @@ export default function RecipeDetail() {
             <div>
               <GeneralInput
                 autoComplete="off"
-                name="ingredientName"
+                name="ingredientNames[]"
                 defaultValue={ingredient.name}
               />
               <ErrorMessage>test error</ErrorMessage>
@@ -133,6 +182,29 @@ export default function RecipeDetail() {
             </button>
           </Fragment>
         ))}
+
+        <div>
+          <GeneralInput
+            autoComplete="off"
+            name="newIngredientAmt"
+            className="border-2 border-b-gray-200 px-2"
+            placeholder="ingredient amount..."
+          />
+          <ErrorMessage> new ingredient amt error</ErrorMessage>
+        </div>
+
+        <div>
+          <GeneralInput
+            autoComplete="off"
+            name="newIngredientName"
+            className="border-2 border-b-gray-200 px-2"
+            placeholder="ingredient name..."
+          />
+          <ErrorMessage> new ingredient name error</ErrorMessage>
+        </div>
+        <button name="_action" value="createIngredient">
+          <SaveIcon />
+        </button>
       </div>
       <label
         htmlFor="instructions"
