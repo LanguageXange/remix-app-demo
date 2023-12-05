@@ -38,3 +38,21 @@ export const GeneralInput = forwardRef<HTMLInputElement, InputProps>(
     );
   }
 );
+
+// for the meal plan modal
+interface IconInputProps extends InputHTMLAttributes<HTMLInputElement> {
+  icon: React.ReactNode;
+}
+export function IconInput({ icon, ...props }: IconInputProps) {
+  return (
+    <div
+      className={classNames(
+        "flex items-stretch border-2 border-gray-300 rounded-md",
+        "focus-within:border-primary"
+      )}
+    >
+      <div className="px-2 flex flex-col justify-center">{icon}</div>
+      <input className="w-full py-3 px-2 outline-none rounded-md" {...props} />
+    </div>
+  );
+}

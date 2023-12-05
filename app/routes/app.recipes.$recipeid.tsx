@@ -10,22 +10,30 @@ import {
 } from "@remix-run/node";
 import {
   Form,
+  Link,
+  Outlet,
   isRouteErrorResponse,
   useActionData,
   useFetcher,
   useLoaderData,
+  useOutletContext,
   useRouteError,
 } from "@remix-run/react";
 import { Fragment, useRef, useState } from "react";
 import { z } from "zod";
 import { Button } from "~/components/Button";
 import { ErrorMessage } from "~/components/ErrorMessage";
-import { DeleteIcon, SaveIcon, TimeIcon } from "~/components/Icon";
+import {
+  CalendarIcon,
+  DeleteIcon,
+  SaveIcon,
+  TimeIcon,
+} from "~/components/Icon";
 import { GeneralInput } from "~/components/Input";
 
 import db from "~/db.server";
 import { handleDelete } from "~/models/utils";
-import { requireLoggedInUser } from "~/utils/auth.server";
+import { canChangeRecipe, requireLoggedInUser } from "~/utils/auth.server";
 import {
   classNames,
   useDebouncedFunction,
@@ -81,24 +89,8 @@ const createIngredientSchema = z.object({
 });
 
 export const action: ActionFunction = async ({ request, params }) => {
-  const user = await requireLoggedInUser(request);
   const recipeId = String(params.recipeid);
-
-  const currentRecipe = await db.myRecipe.findUnique({
-    where: {
-      id: recipeId,
-    },
-  });
-
-  if (currentRecipe === null) {
-    throw json({ message: "recipe does not exist" }, { status: 404 });
-  }
-  if (user.id !== currentRecipe?.userId) {
-    throw json(
-      { message: "You are not authorized to update this recipe" },
-      { status: 401 }
-    );
-  }
+  await canChangeRecipe(request, recipeId);
 
   let formData;
   if (request.headers.get("Content-type")?.includes("multipart/form-data")) {
@@ -280,6 +272,13 @@ export const loader: LoaderFunction = async ({ request, params }) => {
   );
 };
 
+export function useRecipeContext() {
+  return useOutletContext<{
+    recipeName?: string;
+    mealPlanMultiplier?: number | null;
+  }>();
+}
+
 export default function RecipeDetail() {
   const data = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
@@ -361,181 +360,195 @@ export default function RecipeDetail() {
   );
 
   return (
-    <Form method="post" encType="multipart/form-data">
-      <button name="_action" value="saveRecipe" className="hidden" />
+    <>
+      {" "}
+      <Outlet
+        context={{
+          recipeName: data.currentRecipe?.name,
+          mealPlanMultiplier: data.currentRecipe?.mealPlanMultiplier,
+        }}
+      />
+      <Form method="post" encType="multipart/form-data">
+        <button name="_action" value="saveRecipe" className="hidden" />
 
-      <div className="mb-2">
-        <GeneralInput
+        <div className="flex mb-2">
+          <Link to="mealplan" className="flex flex-col justify-center" replace>
+            <CalendarIcon />
+          </Link>
+
+          <div className="ml-2 flex-grow">
+            <GeneralInput
+              key={data.currentRecipe?.id}
+              defaultValue={data.currentRecipe?.name}
+              placeholder="Recipe Name..."
+              autoComplete="off"
+              name="recipeName"
+              error={actionData?.errors?.recipeName}
+              onChange={(e) => saveRecipeName(e.target.value)}
+            />
+
+            <ErrorMessage>
+              {saveNameFetcher?.data?.errors?.recipeName ||
+                actionData?.errors?.recipeName}
+            </ErrorMessage>
+          </div>
+        </div>
+        <div className="flex">
+          <TimeIcon />
+
+          <div className="ml-2 flex-grow">
+            <GeneralInput
+              key={data.currentRecipe?.id}
+              placeholder="Cooking Time"
+              autoComplete="off"
+              name="totalTime"
+              defaultValue={data.currentRecipe?.totalTime}
+              onChange={(e) => saveTotalTime(e.target.value)}
+            />
+          </div>
+          <ErrorMessage>
+            {saveTotalTimeFetcher?.data?.errors?.totalTime ||
+              actionData?.errors?.totalTime}
+          </ErrorMessage>
+        </div>
+
+        <div className="grid grid-cols-[30%_auto_min-content] my-4 gap-2">
+          <h2 className="font-bold text-sm pb-1"> Amount </h2>
+          <h2 className="font-bold text-sm pb-1"> Name </h2>
+          <div></div>
+
+          {renderIngredients.map((ingredient, idx) => (
+            <IngredientRow
+              key={ingredient.id}
+              id={ingredient.id}
+              amount={ingredient.amount}
+              name={ingredient.name}
+              amountError={actionData?.errors?.[`ingredientAmounts.${idx}`]}
+              nameError={actionData?.errors?.[`ingredientNames.${idx}`]}
+              isOptimistic={ingredient.isOptimistic}
+            />
+          ))}
+
+          <div>
+            <GeneralInput
+              ref={newIngreAmountRef}
+              autoComplete="off"
+              name="newIngredientAmt"
+              className="border-2 border-b-gray-200 px-2"
+              placeholder="ingredient amount..."
+              value={ingredientFrom.amount}
+              onChange={(e) =>
+                setIngredientForm({ ...ingredientFrom, amount: e.target.value })
+              }
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault(); // default is save the recipe
+                  createIngredient();
+                }
+              }}
+            />
+            <ErrorMessage>
+              {createIngredientFetcher?.data?.errors?.newIngredientAmt ??
+                actionData?.errors?.newIngredientAmt}
+            </ErrorMessage>
+          </div>
+
+          <div>
+            <GeneralInput
+              autoComplete="off"
+              name="newIngredientName"
+              className="border-2 border-b-gray-200 px-2"
+              placeholder="ingredient name..."
+              value={ingredientFrom.name}
+              onChange={(e) =>
+                setIngredientForm({ ...ingredientFrom, name: e.target.value })
+              }
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault(); // default is save the recipe
+                  createIngredient();
+                }
+              }}
+            />
+            <ErrorMessage>
+              {" "}
+              {createIngredientFetcher?.data?.errors?.newIngredientName ??
+                actionData?.errors?.newIngredientName}
+            </ErrorMessage>
+          </div>
+          <button
+            name="_action"
+            value="createIngredient"
+            onClick={(e) => {
+              e.preventDefault(); // prevent full page refresh
+              createIngredient();
+            }}
+          >
+            <SaveIcon />
+          </button>
+        </div>
+        <label
+          htmlFor="instructions"
+          className="block font-bold text-sm pb-2 w-fit"
+        >
+          Instructions
+        </label>
+        <textarea
           key={data.currentRecipe?.id}
-          defaultValue={data.currentRecipe?.name}
-          placeholder="Recipe Name..."
-          autoComplete="off"
-          name="recipeName"
-          error={actionData?.errors?.recipeName}
-          onChange={(e) => saveRecipeName(e.target.value)}
+          id="instructions"
+          name="instructions"
+          placeholder="Cooking Instructions go here"
+          defaultValue={data.currentRecipe?.instructions}
+          className={classNames(
+            "w-full h-56 rounded-md outline-none border-2 p-2",
+            "focus:border-blue-300"
+          )}
+          onChange={(e) => saveInstructions(e.target.value)}
         />
-      </div>
 
-      <ErrorMessage>
-        {saveNameFetcher?.data?.errors?.recipeName ||
-          actionData?.errors?.recipeName}
-      </ErrorMessage>
-
-      <div className="flex">
-        <TimeIcon />
-
-        <div className="ml-2 flex-grow">
-          <GeneralInput
-            key={data.currentRecipe?.id}
-            placeholder="Cooking Time"
-            autoComplete="off"
-            name="totalTime"
-            defaultValue={data.currentRecipe?.totalTime}
-            onChange={(e) => saveTotalTime(e.target.value)}
-          />
-        </div>
         <ErrorMessage>
-          {saveTotalTimeFetcher?.data?.errors?.totalTime ||
-            actionData?.errors?.totalTime}
+          {" "}
+          {saveInstructionsFetcher?.data?.errors?.instructions ||
+            actionData?.errors?.instructions}{" "}
         </ErrorMessage>
-      </div>
+        <label
+          htmlFor="recipeImage"
+          className="block font-bold text-sm pb-2 w-fit mt-4"
+        >
+          Upload Recipe Image
+        </label>
+        <input
+          id="recipeImage"
+          type="file"
+          name="recipeImage"
+          accept="image/png, image/jpeg"
+          key={`${data.currentRecipe?.id}.image`}
+        />
 
-      <div className="grid grid-cols-[30%_auto_min-content] my-4 gap-2">
-        <h2 className="font-bold text-sm pb-1"> Amount </h2>
-        <h2 className="font-bold text-sm pb-1"> Name </h2>
-        <div></div>
-
-        {renderIngredients.map((ingredient, idx) => (
-          <IngredientRow
-            key={ingredient.id}
-            id={ingredient.id}
-            amount={ingredient.amount}
-            name={ingredient.name}
-            amountError={actionData?.errors?.[`ingredientAmounts.${idx}`]}
-            nameError={actionData?.errors?.[`ingredientNames.${idx}`]}
-            isOptimistic={ingredient.isOptimistic}
-          />
-        ))}
-
-        <div>
-          <GeneralInput
-            ref={newIngreAmountRef}
-            autoComplete="off"
-            name="newIngredientAmt"
-            className="border-2 border-b-gray-200 px-2"
-            placeholder="ingredient amount..."
-            value={ingredientFrom.amount}
-            onChange={(e) =>
-              setIngredientForm({ ...ingredientFrom, amount: e.target.value })
-            }
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault(); // default is save the recipe
-                createIngredient();
+        <hr className="my-4 " />
+        <div className="flex justify-between">
+          <Button
+            otherClass="bg-red-500 hover:bg-red-400"
+            name="_action"
+            value="deleteRecipe"
+            onClick={(e) => {
+              if (!confirm("are you sure you want to delete this recipe?")) {
+                e.preventDefault();
               }
             }}
-          />
-          <ErrorMessage>
-            {createIngredientFetcher?.data?.errors?.newIngredientAmt ??
-              actionData?.errors?.newIngredientAmt}
-          </ErrorMessage>
+          >
+            Delete This Recipe
+          </Button>
+          <Button
+            otherClass="bg-blue-500 hover:bg-blue-400"
+            name="_action"
+            value="saveRecipe"
+          >
+            Save This Recipe
+          </Button>
         </div>
-
-        <div>
-          <GeneralInput
-            autoComplete="off"
-            name="newIngredientName"
-            className="border-2 border-b-gray-200 px-2"
-            placeholder="ingredient name..."
-            value={ingredientFrom.name}
-            onChange={(e) =>
-              setIngredientForm({ ...ingredientFrom, name: e.target.value })
-            }
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault(); // default is save the recipe
-                createIngredient();
-              }
-            }}
-          />
-          <ErrorMessage>
-            {" "}
-            {createIngredientFetcher?.data?.errors?.newIngredientName ??
-              actionData?.errors?.newIngredientName}
-          </ErrorMessage>
-        </div>
-        <button
-          name="_action"
-          value="createIngredient"
-          onClick={(e) => {
-            e.preventDefault(); // prevent full page refresh
-            createIngredient();
-          }}
-        >
-          <SaveIcon />
-        </button>
-      </div>
-      <label
-        htmlFor="instructions"
-        className="block font-bold text-sm pb-2 w-fit"
-      >
-        Instructions
-      </label>
-      <textarea
-        key={data.currentRecipe?.id}
-        id="instructions"
-        name="instructions"
-        placeholder="Cooking Instructions go here"
-        defaultValue={data.currentRecipe?.instructions}
-        className={classNames(
-          "w-full h-56 rounded-md outline-none border-2 p-2",
-          "focus:border-blue-300"
-        )}
-        onChange={(e) => saveInstructions(e.target.value)}
-      />
-
-      <ErrorMessage>
-        {" "}
-        {saveInstructionsFetcher?.data?.errors?.instructions ||
-          actionData?.errors?.instructions}{" "}
-      </ErrorMessage>
-      <label
-        htmlFor="recipeImage"
-        className="block font-bold text-sm pb-2 w-fit mt-4"
-      >
-        Upload Recipe Image
-      </label>
-      <input
-        id="recipeImage"
-        type="file"
-        name="recipeImage"
-        accept="image/png, image/jpeg"
-        key={`${data.currentRecipe?.id}.image`}
-      />
-
-      <hr className="my-4 " />
-      <div className="flex justify-between">
-        <Button
-          otherClass="bg-red-500 hover:bg-red-400"
-          name="_action"
-          value="deleteRecipe"
-          onClick={(e) => {
-            if (!confirm("are you sure you want to delete this recipe?")) {
-              e.preventDefault();
-            }
-          }}
-        >
-          Delete This Recipe
-        </Button>
-        <Button
-          otherClass="bg-blue-500 hover:bg-blue-400"
-          name="_action"
-          value="saveRecipe"
-        >
-          Save This Recipe
-        </Button>
-      </div>
-    </Form>
+      </Form>
+    </>
   );
 }
 
@@ -597,6 +610,7 @@ function IngredientRow({
   return isDeleteingIngredient ? null : (
     <Fragment>
       <input type="hidden" name="ingredientIds[]" value={id} />
+
       <div>
         <GeneralInput
           autoComplete="off"

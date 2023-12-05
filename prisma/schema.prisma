@@ -53,6 +53,7 @@ model MyRecipe {
   instructions String
   totalTime String 
   imageUrl String
+  mealPlanMultiplier Int?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
