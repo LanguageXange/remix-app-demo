@@ -3,6 +3,10 @@ import {
   json,
   type LoaderFunction,
   redirect,
+  unstable_parseMultipartFormData,
+  unstable_composeUploadHandlers,
+  unstable_createFileUploadHandler,
+  unstable_createMemoryUploadHandler,
 } from "@remix-run/node";
 import {
   Form,
@@ -54,6 +58,7 @@ const saveInstructionsSchema = z.object({
 
 const saveRecipeSchema = z
   .object({
+    imageUrl: z.string().optional(),
     ingredientIds: z.array(ingreId).optional(),
     ingredientAmounts: z.array(ingreAmt).optional(),
     ingredientNames: z.array(ingreName).optional(),
@@ -95,7 +100,25 @@ export const action: ActionFunction = async ({ request, params }) => {
     );
   }
 
-  const formData = await request.formData();
+  let formData;
+  if (request.headers.get("Content-type")?.includes("multipart/form-data")) {
+    const uploadHandler = unstable_composeUploadHandlers(
+      unstable_createFileUploadHandler({
+        maxPartSize: 5_000_000,
+        directory: "public/images", // image saved to public/images folder
+      }),
+      // parse everything else into memory
+      unstable_createMemoryUploadHandler()
+    );
+    formData = await unstable_parseMultipartFormData(request, uploadHandler);
+    const recipeImage = formData.get("recipeImage") as File;
+    if (recipeImage.size !== 0) {
+      formData.set("imageUrl", `/images/${recipeImage.name}`);
+    }
+  } else {
+    formData = await request.formData();
+  }
+
   const btnAction = formData.get("_action");
 
   // e.g. deleteIngredient.1
@@ -158,6 +181,7 @@ export const action: ActionFunction = async ({ request, params }) => {
               id: recipeId,
             },
             data: {
+              imageUrl: data.imageUrl, // optional
               name: data.recipeName,
               totalTime: data.totalTime,
               instructions: data.instructions,
@@ -337,7 +361,7 @@ export default function RecipeDetail() {
   );
 
   return (
-    <Form method="post">
+    <Form method="post" encType="multipart/form-data">
       <button name="_action" value="saveRecipe" className="hidden" />
 
       <div className="mb-2">
@@ -475,6 +499,20 @@ export default function RecipeDetail() {
         {saveInstructionsFetcher?.data?.errors?.instructions ||
           actionData?.errors?.instructions}{" "}
       </ErrorMessage>
+      <label
+        htmlFor="recipeImage"
+        className="block font-bold text-sm pb-2 w-fit mt-4"
+      >
+        Upload Recipe Image
+      </label>
+      <input
+        id="recipeImage"
+        type="file"
+        name="recipeImage"
+        accept="image/png, image/jpeg"
+        key={`${data.currentRecipe?.id}.image`}
+      />
+
       <hr className="my-4 " />
       <div className="flex justify-between">
         <Button
