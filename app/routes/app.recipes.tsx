@@ -8,6 +8,7 @@ import {
   Form,
   NavLink,
   Outlet,
+  useFetchers,
   useLoaderData,
   useLocation,
   useNavigation,
@@ -74,6 +75,7 @@ export default function Recipes() {
   const data = useLoaderData<typeof loader>() as LoaderData;
   const location = useLocation(); // gives you the current location object
   const navigation = useNavigation(); // navigation.location tells ou what the next location will be
+  const fetchers = useFetchers(); // Returns an array of all in-flight fetchers.
 
   return (
     <RecipePageWrapper>
@@ -90,6 +92,23 @@ export default function Recipes() {
         <ul>
           {data?.recipes.map((recipe) => {
             const isLoading = navigation.location?.pathname.endsWith(recipe.id); // check if we've navigated to the recipe detail page
+            const optimisticData = new Map();
+            for (let fetcher of fetchers) {
+              if (fetcher.formAction?.includes(recipe.id)) {
+                if (fetcher.formData?.get("_action") === "saveRecipeName") {
+                  optimisticData.set(
+                    "recipeName",
+                    fetcher.formData?.get("recipeName")
+                  );
+                }
+                if (fetcher.formData?.get("_action") === "saveTotalTime") {
+                  optimisticData.set(
+                    "totalTime",
+                    fetcher.formData?.get("totalTime")
+                  );
+                }
+              }
+            }
             return (
               <li className="my-4" key={recipe.id}>
                 <NavLink
@@ -98,7 +117,11 @@ export default function Recipes() {
                 >
                   {({ isActive }) => (
                     <RecipeCard
-                      {...recipe}
+                      name={optimisticData.get("recipeName") ?? recipe.name}
+                      totalTime={
+                        optimisticData.get("totalTime") ?? recipe.totalTime
+                      }
+                      imageUrl={recipe.imageUrl}
                       isActive={isActive}
                       isLoading={isLoading}
                     />
