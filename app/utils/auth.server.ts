@@ -22,6 +22,7 @@ export async function requireLoggedOutUser(request: Request) {
   }
 }
 
+// redirect user to login if user not found && if user tries to view recipe, pantry, grocery page
 export async function requireLoggedInUser(request: Request) {
   const user = await getCurrentUser(request);
   if (user === null) {

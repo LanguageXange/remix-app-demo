@@ -30,18 +30,31 @@ import { classNames, useBuildSearchParams } from "~/utils/misc";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   const user = await requireLoggedInUser(request);
-  const recipe = await db.myRecipe.create({
-    data: {
-      userId: user.id,
-      name: "New Recipe",
-      totalTime: "0 min",
-      imageUrl: "https://via.placeholder.com/150?text=Remix+Recipes",
-      instructions: "to be created",
-    },
-  });
-  const url = new URL(request.url); // this will contain the original search query
-  url.pathname = `/app/recipes/${recipe.id}`;
-  return redirect(url.toString());
+  const formData = await request.formData();
+  const btnAction = formData.get("_action");
+  switch (btnAction) {
+    case "createRecipe":
+      const recipe = await db.myRecipe.create({
+        data: {
+          userId: user.id,
+          name: "New Recipe",
+          totalTime: "0 min",
+          imageUrl: "https://via.placeholder.com/150?text=Remix+Recipes",
+          instructions: "to be created",
+        },
+      });
+      const url = new URL(request.url); // this will contain the original search query
+      url.pathname = `/app/recipes/${recipe.id}`;
+      return redirect(url.toString());
+    case "clearMealPlan":
+      await db.myRecipe.updateMany({
+        where: { userId: user.id },
+        data: { mealPlanMultiplier: null },
+      });
+      return redirect("/app/recipes");
+    default:
+      return null;
+  }
 };
 
 export const loader: LoaderFunction = async ({ request }) => {
@@ -91,6 +104,7 @@ export default function Recipes() {
   const [searchParams] = useSearchParams();
   const mealPlanOnlyFilterOn = searchParams.get("filter") === "mealPlanOnly";
   const buildSearchParam = useBuildSearchParams();
+  const noRecipe = data?.recipes.length === 0;
   return (
     <RecipePageWrapper>
       <RecipeListWrapper>
@@ -116,10 +130,31 @@ export default function Recipes() {
         </div>
 
         <Form method="post" className="mt-4">
-          <Button otherClass="bg-primary" name="" value="">
-            <PlusIcon />
-            <span className="pl-2"> Create New Recipe</span>
-          </Button>
+          {mealPlanOnlyFilterOn ? (
+            noRecipe ? (
+              <p> You have no meal plan here</p>
+            ) : (
+              <Button
+                otherClass="bg-red-500 hover:bg-red-400"
+                name="_action"
+                value="clearMealPlan"
+                onClick={(e) => {
+                  if (
+                    !confirm("Are you sure you want to clear all meal plans?")
+                  ) {
+                    e.preventDefault();
+                  }
+                }}
+              >
+                Clear All Meal Plans
+              </Button>
+            )
+          ) : (
+            <Button otherClass="bg-primary" name="_action" value="createRecipe">
+              <PlusIcon />
+              <span className="pl-2"> Create New Recipe</span>
+            </Button>
+          )}
         </Form>
 
         <ul>
