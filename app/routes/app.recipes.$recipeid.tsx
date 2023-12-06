@@ -23,12 +23,7 @@ import { Fragment, useRef, useState } from "react";
 import { z } from "zod";
 import { Button } from "~/components/Button";
 import { ErrorMessage } from "~/components/ErrorMessage";
-import {
-  CalendarIcon,
-  DeleteIcon,
-  SaveIcon,
-  TimeIcon,
-} from "~/components/Icon";
+import { BoxIcon, DeleteIcon, SaveIcon, TimeIcon } from "~/components/Icon";
 import { GeneralInput } from "~/components/Input";
 
 import db from "~/db.server";
@@ -372,8 +367,17 @@ export default function RecipeDetail() {
         <button name="_action" value="saveRecipe" className="hidden" />
 
         <div className="flex mb-2">
-          <Link to="mealplan" className="flex flex-col justify-center" replace>
-            <CalendarIcon />
+          <Link
+            to="mealplan"
+            className={classNames(
+              "flex flex-col justify-center",
+              data.currentRecipe?.mealPlanMultiplier !== null
+                ? "text-orange-300"
+                : ""
+            )}
+            replace
+          >
+            <BoxIcon />
           </Link>
 
           <div className="ml-2 flex-grow">
@@ -710,7 +714,7 @@ export function ErrorBoundary() {
         </>
       ) : (
         <>
-          <h2 className="mb-2">An unexpected error occurred.</h2>
+          <h2 className="mb-2">Ooops! An unexpected error occurred.</h2>
         </>
       )}
     </div>

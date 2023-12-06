@@ -6,15 +6,17 @@ import {
 } from "@remix-run/node";
 import {
   Form,
+  Link,
   NavLink,
   Outlet,
   useFetchers,
   useLoaderData,
   useLocation,
   useNavigation,
+  useSearchParams,
 } from "@remix-run/react";
 import { Button } from "~/components/Button";
-import { PlusIcon } from "~/components/Icon";
+import { BoxIcon, PlusIcon } from "~/components/Icon";
 import {
   RecipeCard,
   RecipeDetailWrapper,
@@ -24,6 +26,7 @@ import {
 import { SearchBar } from "~/components/SearchBar";
 import db from "~/db.server";
 import { requireLoggedInUser } from "~/utils/auth.server";
+import { classNames, useBuildSearchParams } from "~/utils/misc";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   const user = await requireLoggedInUser(request);
@@ -45,6 +48,7 @@ export const loader: LoaderFunction = async ({ request }) => {
   const user = await requireLoggedInUser(request);
   const url = new URL(request.url);
   const query = url.searchParams.get("q");
+  const filter = url.searchParams.get("filter");
 
   const recipes = await db.myRecipe.findMany({
     where: {
@@ -53,8 +57,15 @@ export const loader: LoaderFunction = async ({ request }) => {
         contains: query ?? "",
         mode: "insensitive",
       },
+      mealPlanMultiplier: filter === "mealPlanOnly" ? { not: null } : {},
     },
-    select: { name: true, id: true, imageUrl: true, totalTime: true },
+    select: {
+      name: true,
+      id: true,
+      imageUrl: true,
+      totalTime: true,
+      mealPlanMultiplier: true,
+    },
     orderBy: { createdAt: "desc" },
   });
 
@@ -66,6 +77,7 @@ type Recipe = {
   id: string;
   imageUrl: string;
   totalTime: string;
+  mealPlanMultiplier: number | null;
 };
 
 type LoaderData = {
@@ -76,11 +88,32 @@ export default function Recipes() {
   const location = useLocation(); // gives you the current location object
   const navigation = useNavigation(); // navigation.location tells ou what the next location will be
   const fetchers = useFetchers(); // Returns an array of all in-flight fetchers.
-
+  const [searchParams] = useSearchParams();
+  const mealPlanOnlyFilterOn = searchParams.get("filter") === "mealPlanOnly";
+  const buildSearchParam = useBuildSearchParams();
   return (
     <RecipePageWrapper>
       <RecipeListWrapper>
-        <SearchBar placeholderText="Search recipes..." />
+        <div className="flex gap-4">
+          <SearchBar
+            placeholderText="Search Recipes..."
+            otherClass="flex-grow"
+          />
+          <Link
+            to={buildSearchParam(
+              "filter",
+              mealPlanOnlyFilterOn ? "" : "mealPlanOnly"
+            )}
+            className={classNames(
+              "flex flex-col justify-center border-2 rounded-md px-2",
+              mealPlanOnlyFilterOn
+                ? "text-white bg-orange-300 border-orange-300"
+                : "text-black bg-gray-100"
+            )}
+          >
+            <BoxIcon />
+          </Link>
+        </div>
 
         <Form method="post" className="mt-4">
           <Button otherClass="bg-primary" name="" value="">
@@ -124,6 +157,7 @@ export default function Recipes() {
                       imageUrl={recipe.imageUrl}
                       isActive={isActive}
                       isLoading={isLoading}
+                      mealPlanMultiplier={recipe.mealPlanMultiplier}
                     />
                   )}
                 </NavLink>

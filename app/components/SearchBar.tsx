@@ -7,7 +7,7 @@ type SearchBarProps = {
   otherClass?: string;
 };
 export function SearchBar({ placeholderText, otherClass }: SearchBarProps) {
-  const [searchParam] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const navigation = useNavigation();
   const isSearching = navigation.formData?.has("q");
   return (
@@ -23,13 +23,19 @@ export function SearchBar({ placeholderText, otherClass }: SearchBarProps) {
         <SearchIcon />
       </button>
       <input
-        defaultValue={searchParam.get("q") ?? ""}
+        defaultValue={searchParams.get("q") ?? ""}
         type="text"
         name="q"
         autoComplete="off"
         placeholder={placeholderText}
         className="p-2 w-full outline-none rounded-md"
       />
+
+      {Array.from(searchParams.entries()).map(([name, value], index) =>
+        name !== "q" ? (
+          <input key={index} name={name} value={value} type="hidden" />
+        ) : null
+      )}
     </Form>
   );
 }

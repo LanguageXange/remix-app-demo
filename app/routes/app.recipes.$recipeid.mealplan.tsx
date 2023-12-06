@@ -1,4 +1,4 @@
-import { Form, Link } from "@remix-run/react";
+import { Form, Link, useActionData } from "@remix-run/react";
 import ReactModal from "react-modal";
 import { Button } from "~/components/Button";
 import { XIcon } from "~/components/Icon";
@@ -8,10 +8,20 @@ import { useRecipeContext } from "./app.recipes.$recipeid";
 import { json, type ActionFunction, redirect } from "@remix-run/node";
 import { canChangeRecipe } from "~/utils/auth.server";
 import db from "~/db.server";
+import { z } from "zod";
+import { validateform } from "~/utils/validation";
+import { ErrorMessage } from "~/components/ErrorMessage";
 
 if (typeof window !== "undefined") {
   ReactModal.setAppElement("body");
 }
+
+const updateMealPlanSchema = z.object({
+  mealPlanMultiplier: z.preprocess(
+    (value) => parseInt(String(value)),
+    z.number().min(1)
+  ),
+});
 
 // action
 export const action: ActionFunction = async ({ request, params }) => {
@@ -28,13 +38,25 @@ export const action: ActionFunction = async ({ request, params }) => {
       });
       return redirect("..");
     case "updateMealPlan":
-      return null;
+      return validateform(
+        formData,
+        updateMealPlanSchema,
+        async ({ mealPlanMultiplier }) => {
+          await db.myRecipe.update({
+            where: { id: recipeId },
+            data: { mealPlanMultiplier },
+          });
+          return redirect("..");
+        },
+        (errors) => json({ errors }, { status: 400 })
+      );
     default:
       return null;
   }
 };
 
 export default function MealPlan() {
+  const actionData = useActionData();
   const { recipeName, mealPlanMultiplier } = useRecipeContext();
 
   return (
@@ -61,7 +83,8 @@ export default function MealPlan() {
             autoComplete="off"
             name="mealPlanMultiplier"
           />
-          {/* <ErrorMessage>{actionData?.errors?.mealPlanMultiplier}</ErrorMessage> */}
+
+          <ErrorMessage>{actionData?.errors?.mealPlanMultiplier}</ErrorMessage>
           <div className="flex justify-end gap-4 mt-8">
             {mealPlanMultiplier !== null ? (
               <Button
