@@ -10,7 +10,7 @@ export default {
         background: "#fff",
         "btn-primary": "#0d6efd",
         "btn-primary-light": "#3682f3",
-        "btn-danger": "#dc3545",
+        "btn-danger": "#ff2222",
         "btn-danger-light": "#da606b",
       },
     },

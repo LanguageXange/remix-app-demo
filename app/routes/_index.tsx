@@ -1,9 +1,5 @@
-import { Header } from "~/components/Header";
+import { redirect } from "@remix-run/node";
 
-export default function Index() {
-  return (
-    <div>
-      <Header title="Welcome" />
-    </div>
-  );
+export function loader() {
+  return redirect("/discover");
 }

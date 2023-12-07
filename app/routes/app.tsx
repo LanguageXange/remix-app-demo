@@ -7,5 +7,5 @@ const links = [
 ];
 
 export default function App() {
-  return <Layout title="app" links={links} />;
+  return <Layout title="My App" links={links} />;
 }

@@ -242,7 +242,7 @@ function Shelf({ shelf }: ShelfProps) {
     <li
       key={shelf.id}
       className={classNames(
-        "border-2 border-primary rounded-2xl p-5 h-fit shadow-lg shadow-gray-300",
+        "border-2 border-primary rounded-2xl p-5 h-fit shadow-md ",
         "w-[calc(100vw-2rem)] flex-none snap-center",
         "md:w-96"
       )}

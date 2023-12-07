@@ -90,7 +90,7 @@ export default function MealPlan() {
               <Button
                 name="_action"
                 value="removeFromMealPlan"
-                otherClass="bg-red-500 hover:bg-red-400"
+                otherClass="bg-btn-danger hover:bg-btn-danger-light"
               >
                 Remove from Meal Plan
               </Button>
@@ -98,7 +98,7 @@ export default function MealPlan() {
             <Button
               name="_action"
               value="updateMealPlan"
-              otherClass="bg-blue-500 hover:bg-blue-400"
+              otherClass="bg-btn-primary hover:bg-btn-primary-light"
             >
               Save
             </Button>

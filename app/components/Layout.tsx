@@ -10,7 +10,7 @@ export function Layout({ title, links }: LayoutProps) {
   return (
     <div className="flex flex-col h-full">
       <h1 className="text-3xl font-bold my-4">{title}</h1>
-      <nav className="border-b-2 pb-2 mt-2">
+      <nav className="border-b-2 pb-2 mt-2 mb-4">
         {links.map(({ to, text }) => (
           <CustomNavLink key={to} to={to}>
             {" "}

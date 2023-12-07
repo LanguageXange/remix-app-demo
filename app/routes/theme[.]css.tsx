@@ -7,7 +7,7 @@ function getTheme(color: string) {
   switch (color) {
     case "pink": {
       return {
-        colorPrimary: "#f224f2",
+        colorPrimary: "#f946f9",
         colorPrimaryLight: "#e224e2",
       };
     }
