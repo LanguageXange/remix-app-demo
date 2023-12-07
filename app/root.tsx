@@ -29,10 +29,13 @@ import {
   LoginIcon,
   LogoutIcon,
 } from "./components/Icon";
-import { useEffect } from "react";
+
 import { getCurrentUser } from "./utils/auth.server";
 
-export const links: LinksFunction = () => [{ rel: "stylesheet", href: styles }];
+export const links: LinksFunction = () => [
+  { rel: "stylesheet", href: styles },
+  { rel: "stylesheet", href: "/theme.css" },
+];
 
 export const meta: MetaFunction = () => {
   return [

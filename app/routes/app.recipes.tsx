@@ -135,7 +135,7 @@ export default function Recipes() {
               <p> You have no meal plan here</p>
             ) : (
               <Button
-                otherClass="bg-red-500 hover:bg-red-400"
+                otherClass="bg-btn-danger hover:bg-btn-danger-light"
                 name="_action"
                 value="clearMealPlan"
                 onClick={(e) => {

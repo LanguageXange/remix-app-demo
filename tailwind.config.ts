@@ -5,9 +5,13 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: "#00743e",
-        "primary-light": "#4c9d77",
+        primary: "var(--color-primary)",
+        "primary-light": "var(--color-primary-light)",
         background: "#fff",
+        "btn-primary": "#0d6efd",
+        "btn-primary-light": "#3682f3",
+        "btn-danger": "#dc3545",
+        "btn-danger-light": "#da606b",
       },
     },
   },

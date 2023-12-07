@@ -532,7 +532,7 @@ export default function RecipeDetail() {
         <hr className="my-4 " />
         <div className="flex justify-between">
           <Button
-            otherClass="bg-red-500 hover:bg-red-400"
+            otherClass="bg-btn-danger hover:bg-btn-danger-light"
             name="_action"
             value="deleteRecipe"
             onClick={(e) => {
@@ -544,7 +544,7 @@ export default function RecipeDetail() {
             Delete This Recipe
           </Button>
           <Button
-            otherClass="bg-blue-500 hover:bg-blue-400"
+            otherClass="bg-btn-primary hover:bg-btn-primary-light"
             name="_action"
             value="saveRecipe"
           >

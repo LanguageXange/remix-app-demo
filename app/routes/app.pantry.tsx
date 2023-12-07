@@ -366,7 +366,7 @@ function Shelf({ shelf }: ShelfProps) {
             {deleteShelfFetcher.data?.errors?.shelfId}
           </ErrorMessage>
           <Button
-            otherClass="w-full bg-red-500 hover:bg-red-400 mt-8"
+            otherClass="w-full bg-btn-danger hover:bg-btn-danger-light mt-8"
             name="_action"
             value="deleteShelf"
             disabled={isDeleting}

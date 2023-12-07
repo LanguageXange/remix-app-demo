@@ -1,14 +1,8 @@
-import { Outlet, useRouteError } from "@remix-run/react";
-import { useMatchesData } from "~/utils/misc";
+import { useRouteError } from "@remix-run/react";
+import { Layout } from "~/components/Layout";
+
 export default function SettingsLayout() {
-  const routeData = useMatchesData("routes/settings.profile");
-  return (
-    <div>
-      {routeData?.message}
-      <h1>Settings Layout</h1>
-      <Outlet />
-    </div>
-  );
+  return <Layout title="Settings" links={[{ to: "app", text: "App" }]} />;
 }
 export function ErrorBoundary() {
   const error = useRouteError();
