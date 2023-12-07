@@ -14,6 +14,7 @@ import { renderToPipeableStream } from "react-dom/server";
 
 const ABORT_DELAY = 5_000;
 
+// handleRequest is only run for requests that are not to your loaders or actions
 export default function handleRequest(
   request: Request,
   responseStatusCode: number,
@@ -21,6 +22,12 @@ export default function handleRequest(
   remixContext: EntryContext,
   loadContext: AppLoadContext
 ) {
+  const ifNoneMatch = request.headers.get("if-none-match");
+  const etag = responseHeaders.get("etag");
+
+  if (ifNoneMatch !== null && etag !== null && ifNoneMatch === etag) {
+    return new Response(null, { status: 304, headers: responseHeaders });
+  }
   return isbot(request.headers.get("user-agent"))
     ? handleBotRequest(
         request,
