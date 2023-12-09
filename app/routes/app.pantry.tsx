@@ -28,7 +28,6 @@ import {
 } from "~/models/pantry-item.server";
 import { classNames, useIsHydrated, useServerLayoutEffect } from "~/utils/misc";
 import {
-  SearchIcon,
   PlusIcon,
   DeleteIcon,
   EditIcon,
@@ -39,14 +38,9 @@ import { ErrorMessage } from "~/components/ErrorMessage";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { validateform } from "~/utils/validation";
-import { type getCurrentUser, requireLoggedInUser } from "~/utils/auth.server";
+import { requireLoggedInUser } from "~/utils/auth.server";
 import { SearchBar } from "~/components/SearchBar";
 import { GeneralInput } from "~/components/Input";
-
-type LoaderData = {
-  shelves: Awaited<ReturnType<typeof getAllShelves>>;
-  user: Awaited<ReturnType<typeof getCurrentUser>>;
-};
 
 const saveShelfNameSchema = z.object({
   shelfName: z.string().min(1, "Shelf Name cannot be blank!"), // here we can pass in custom error message
@@ -161,7 +155,7 @@ export const action: ActionFunction = async ({ request }) => {
 
 // remix handles the API layer for us and injects the data into the component tree
 export default function Pantry() {
-  const data = useLoaderData<typeof loader>() as LoaderData;
+  const data = useLoaderData<typeof loader>();
   const createShelfFetcher = useFetcher();
   const isCreatingShelf =
     createShelfFetcher.formData?.get("_action") === "createShelf";
