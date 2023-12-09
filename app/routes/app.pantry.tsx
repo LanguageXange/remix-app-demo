@@ -185,6 +185,7 @@ export default function Pantry() {
           otherClass="bg-primary hover:bg-primary-light mt-4 w-full md:w-fit"
           name="_action"
           value="createShelf"
+          aria-label="Create Shelf"
         >
           <PlusIcon />
           <span className="pl-2">
@@ -256,6 +257,7 @@ function Shelf({ shelf }: ShelfProps) {
             defaultValue={shelf.name}
             name="shelfName"
             placeholder="Enter Shelf Name"
+            aria-label="Shelf Name"
             autoComplete="off"
             onChange={(e) =>
               e.target.value !== "" &&
@@ -392,7 +394,11 @@ function ShelfItem({ item }: ShelfItemProps) {
       <deleteItemFetcher.Form method="post">
         <input type="hidden" name="itemId" value={item.id} />
         {item.isOptimistic ? null : (
-          <Button name="_action" value="deleteShelfItem">
+          <Button
+            name="_action"
+            value="deleteShelfItem"
+            aria-label={`delete ${item.name}`}
+          >
             <DeleteIcon />
           </Button>
         )}

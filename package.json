@@ -8,7 +8,8 @@
     "dev": "remix dev --manual",
     "start": "remix-serve ./build/index.js",
     "typecheck": "tsc",
-    "test:e2e": "INCLUDE_TEST_ROUTES=true pnpm execute playwright test"
+    "test:e2e": "INCLUDE_TEST_ROUTES=true npx playwright test",
+    "test:e2e:ui": "INCLUDE_TEST_ROUTES=true npx playwright test --ui"
   },
   "dependencies": {
     "@prisma/client": "^5.6.0",
